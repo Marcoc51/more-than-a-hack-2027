@@ -19,11 +19,11 @@ CODE = {"H": bl.HOME, "A": bl.AWAY, ".": ps.NO_CONTROL, "_": ps.NO_BALL}
 H, A, U = bl.HOME, bl.AWAY, ps.UNKNOWN
 
 
-def run(evidence, dead="", restarts=None, segments=None, params=P, game=G):
+def run(evidence, dead="", restarts=None, segments=None, params=P):
     """evidence: H/A/./_ per frame. dead: 'x' marks a confirmed-dead frame (same length)."""
     ev = np.array([CODE[c] for c in evidence.replace(" ", "")], dtype=np.int8)
     mask = np.array([c == "x" for c in dead.replace(" ", "")], dtype=bool) if dead else None
-    state, source = ps.infer_states(ev, params, segments, mask, restarts or {}, game)
+    state, source = ps.infer_states(ev, params, segments, mask, restarts or {})
     return "".join(ps.to_labels(state)), source
 
 
@@ -161,11 +161,12 @@ def test_sustained_opposite_control_overrides_a_wrong_restart_team():
     assert labels == "DDDD" + "HHAAAA"
 
 
-def test_stoppage_waits_for_an_upcoming_tagged_restart():
-    # Control while the ball is dead (e.g. a goalkeeper placing it) is ignored when a tagged
-    # restart lies within the lookahead.
-    labels, _ = run("HHH.HHHH....." + "AAAA", "---x---------" + "----", restarts={13: A})
-    assert labels == "HHHD" + "D" * 9 + "AAAA"
+def test_control_in_a_stoppage_outside_dead_frames_is_never_vetoed_by_a_future_restart():
+    # Phase 4D: sustained control outside confirmed-dead frames ends a stoppage, whoever takes
+    # the next restart. Set-up control by the restarting team before its tag window therefore
+    # reads as possession (documented trade-off; see the end-to-end set-up test below).
+    labels, _ = run("HHH.AAAA....." + "AAAA", "---x---------" + "----", restarts={13: A})
+    assert labels == "HHHD" + "A" * 13
 
 
 def test_stoppage_without_any_restart_ends_on_sustained_control():
@@ -356,40 +357,6 @@ def test_game_defaults_are_the_documented_values():
 
 # Phase 4 audit regressions --------------------------------------------------------------------
 
-def test_stoppage_whose_own_restart_was_missed_does_not_wait_for_a_later_one():
-    # Ball out at frame 3; this stoppage's set-piece window (frames 4-6) had no locatable strike;
-    # live play resumes (away control from frame 8); a different stoppage's restart is at 21.
-    evidence = "HHH." + "...." + "AAAA" + "." * 9 + "H"
-    dead = "---x" + "-" * 18
-    missed = np.zeros(22, dtype=bool)
-    missed[4:7] = True
-    ev = np.array([CODE[c] for c in evidence], dtype=np.int8)
-    mask = np.array([c == "x" for c in dead])
-    state, _ = ps.infer_states(ev, P, None, mask, {21: H}, G, missed)
-    assert "".join(ps.to_labels(state)) == "HHH" + "D" * 5 + "A" * 13 + "H"
-    # Without the missed window the stoppage would wait for frame 21 -- the old behaviour.
-    state, _ = ps.infer_states(ev, P, None, mask, {21: H}, G)
-    assert "".join(ps.to_labels(state)) == "HHH" + "D" * 18 + "H"
-
-
-def test_missed_window_before_the_stoppage_does_not_cancel_waiting():
-    evidence = "HHH." + "AAAA" + "...." + "A"
-    missed = np.zeros(13, dtype=bool)
-    missed[0:2] = True                       # an earlier, unrelated unlocated tag
-    ev = np.array([CODE[c] for c in evidence], dtype=np.int8)
-    mask = np.array([c == "x" for c in "---x" + "-" * 9])
-    state, _ = ps.infer_states(ev, P, None, mask, {12: A}, G, missed)
-    assert "".join(ps.to_labels(state)) == "HHH" + "D" * 9 + "A"
-
-
-def test_missed_restarts_mask_covers_only_unlocated_set_pieces():
-    speed = [0.0] * 40
-    speed[10] = 9.0                          # strike for the first tag only
-    tags = [tag(4, 15), tag(20, 30), tag(32, 38, code="build up")]
-    mask = ps.missed_restarts(tracking(40, speed), tags, G)
-    assert not mask[:20].any() and mask[20:30].all() and not mask[30:].any()
-
-
 def test_out_of_bounds_matches_a_reference_and_handles_long_runs():
     rng = np.random.RandomState(4)
     x = np.where(rng.rand(3000) < .5, 120.0, 50.0)
@@ -409,3 +376,309 @@ def test_out_of_bounds_matches_a_reference_and_handles_long_runs():
         else:
             run = []
     assert (ps.out_of_bounds(x, y, game=G) == expected).all()
+
+
+# Phase 4B corrective regressions (F1-F5, F9) ----------------------------------------------------
+
+def test_f1_unrelated_future_restart_does_not_suppress_the_other_teams_possession():
+    # Untagged stoppage at frame 3; away sustains control 5..14; a later home restart at 18.
+    labels, _ = run("HHH." + "." + "A" * 10 + "..." + "HH", "---x" + "-" * 17, restarts={18: H})
+    assert labels == "HHHDD" + "A" * 13 + "HH"
+
+
+def test_f1_unknown_team_restart_does_not_suppress_control():
+    labels, _ = run("HHH." + "." + "A" * 10 + "..." + "..", "---x" + "-" * 17, restarts={18: U})
+    assert labels == "HHHDD" + "A" * 13 + "XX"   # unknown-team restart, nobody confirmed after it
+
+
+def test_f1_same_team_future_restart_does_not_suppress_control():
+    # Home's sustained control from 15 ends the stoppage; home's later restart at 30 is a new
+    # possession only if a dead interval separates them (here none is marked).
+    labels, _ = run("HHH." + "." * 11 + "HHHH" + "." * 11 + "H", "---x" + "-" * 27,
+                    restarts={30: H})
+    assert labels == "HHH" + "D" * 12 + "H" * 16
+
+
+def test_f2_restart_team_aggregation_is_order_and_duplicate_independent():
+    speed = [0.0] * 30
+    speed[10] = 9.0
+    trk = tracking(30, speed)
+    home, away, na = (tag(2, 20, team="Synthetic Home"), tag(3, 20, team="Synthetic Away"),
+                      tag(4, 20))
+    for order in ([home, away, home], [home, home, away], [away, home, home], [na, away, home]):
+        assert ps.game_evidence(trk, order, NAMES, [(0, 30)], game=G)[1] == {10: U}
+    for order in ([home, home], [home, na], [na, home, na, home]):
+        assert ps.game_evidence(trk, order, NAMES, [(0, 30)], game=G)[1] == {10: H}
+
+
+def test_f2_kickoff_counted_once_and_conflicts_with_a_set_piece_tag():
+    speed = [0.0] * 40
+    speed[15] = 10.0
+    kickoff = tag(5, 25, "Kick Off (Start)", "Synthetic Home")
+    other = tag(6, 25, "Free Kick", "Synthetic Away")
+    for order in ([kickoff, other], [other, kickoff]):
+        _, restarts = ps.game_evidence(tracking(40, speed), order, NAMES, [(10, 40)], game=G)
+        assert restarts == {15: U}
+    _, restarts = ps.game_evidence(tracking(40, speed), [kickoff, kickoff], NAMES, [(10, 40)],
+                                   game=G)
+    assert restarts == {15: H}
+
+
+def test_f3_pending_run_does_not_accumulate_across_a_long_gap():
+    # In a stoppage: 2 away frames, 30 missing frames, 1 away frame: no 3-frame run.
+    labels, _ = run("HHH." + "AA" + "_" * 30 + "A" + "...", "---x" + "-" * 36)
+    assert labels == "HHH" + "D" * 37
+    # Same in live play: the away frames are disconnected, so no switch to away.
+    labels, _ = run("HHH" + "AA" + "_" * 3 + "A" + "...")
+    assert labels == "HHH" + "H" * 9
+
+
+def test_f3_short_dropouts_still_pause_a_pending_run():
+    # 1- and 2-frame dropouts (< confirm_frames = 3) pause the run; the switch is backdated.
+    assert run("HHH" + "A_A_A" + "..")[0] == "HHH" + "A" * 7
+    assert run("HHH" + "A__A__A" + "..")[0] == "HHH" + "A" * 9
+
+
+def test_f3_established_possession_still_held_through_gaps_up_to_max_gap():
+    assert run("HHH" + "____" + "..")[0] == "HHH" + "H" * 6
+    assert run("HHH" + "_____" + "..")[0] == "HHH" + "H" * 4 + "X" * 3   # gap 5 > max_gap 4
+
+
+def test_f5_out_of_bounds_run_does_not_carry_across_halftime():
+    x = np.array([50.0, 120.0, 120.0, 120.0, 50.0, 50.0])
+    y = np.full(len(x), 34.0)
+    assert ps.out_of_bounds(x, y, game=G).tolist() == [False, True, True, True, False, False]
+    assert not ps.out_of_bounds(x, y, game=G, segments=[(0, 3), (3, 6)]).any()
+    x = np.full(6, 120.0)
+    assert ps.out_of_bounds(x, y, game=G, segments=[(0, 3), (3, 6)]).all()
+    assert ps.out_of_bounds(x, y, game=G, segments=[(1, 4)]).tolist() == \
+        [False, True, True, True, False, False]       # outside the segments: never marked
+
+
+def test_f5_game_evidence_resets_out_of_bounds_per_half():
+    x = [50.0, 120.0, 120.0, 120.0, 50.0, 50.0]
+    dead, _ = ps.game_evidence(tracking(6, x=x), [], NAMES, [(0, 3), (3, 6)], game=G)
+    assert not dead.any()
+
+
+@pytest.mark.parametrize("bad_id", ["0", "-3", "7", "999", "abc", ""])
+def test_f9_invalid_frame_ids_are_skipped(meta_path, write_raw, bad_id):
+    far, near = group(0.9, 0.9), group(0.5, 0.5)
+    lines = [raw_line(1, [far] * 5, near),
+             "{}:{}:{}\n".format(bad_id, ";".join([far, near] + [far] * 3), near)]
+    trk = ps.read_tracking(write_raw(lines), bl.team_of_each_track(meta_path), 6)
+    assert trk.home[0] > 20                          # the valid line: home player far away
+    assert np.isnan(trk.home[1:]).all()              # nothing else written, nothing wrapped
+
+
+# Phase 4D final remediation (F1 same-team veto, F5 kickoff across halves, F9 duplicates) ----------
+
+def full_pipeline(evidence, speed, x, tags, segments, game=ps.GAME_DEFAULTS):
+    """game_evidence + infer_states with the real parameter defaults."""
+    n = len(evidence)
+    trk = ps.Tracking(np.full(n, 9.0), np.full(n, 9.0), np.array(x, float), np.full(n, 34.0),
+                      np.array(speed, float))
+    dead, restarts = ps.game_evidence(trk, tags, NAMES, segments, game=game)
+    ev = np.array([CODE[c] for c in evidence], dtype=np.int8)
+    state, _ = ps.infer_states(ev, ps.DEFAULTS, segments, dead, restarts)
+    return "".join(ps.to_labels(state)), restarts
+
+
+def codex_f1(middle_team):
+    """Codex re-audit scenario, 300 frames: untagged stoppage, live possession, then a separate
+    stoppage whose home free kick is tagged [220, 260) and struck at 240."""
+    evidence = "H" * 20 + "." * 10 + middle_team * 170 + "." * 20 + "H" * 80
+    x = [50.0] * 300
+    x[20:23] = x[200:203] = [120.0] * 3             # ball out of play
+    speed = [0.0] * 300
+    speed[240] = 9.0
+    return full_pipeline(evidence, speed, x, [tag(220, 260, "Free Kick", "Synthetic Home")],
+                         [(0, 300)])[0]
+
+
+def test_f1_same_team_future_restart_keeps_the_live_possession_codex_scenario():
+    assert codex_f1("H") == "H" * 20 + "D" * 10 + "H" * 170 + "D" * 40 + "H" * 60
+
+
+def test_f1_opposing_team_future_restart_keeps_the_live_possession_codex_scenario():
+    assert codex_f1("A") == "H" * 20 + "D" * 10 + "A" * 170 + "D" * 40 + "H" * 60
+
+
+def test_f1_long_live_possession_before_a_same_team_restart():
+    n = 2300                                         # ~2,170 frames of live home possession
+    evidence = "H" * 20 + "." * 10 + "H" * 2170 + "." * 20 + "H" * 80
+    x = [50.0] * n
+    x[20:23] = x[2200:2203] = [120.0] * 3
+    speed = [0.0] * n
+    speed[2240] = 9.0
+    labels, _ = full_pipeline(evidence, speed, x, [tag(2220, 2260, "Free Kick", "Synthetic Home")],
+                              [(0, n)])
+    assert labels == "H" * 20 + "D" * 10 + "H" * 2170 + "D" * 40 + "H" * 60
+
+
+def test_f1_opposite_risk_setup_control_before_the_tag_window_is_possession():
+    # Trade-off made explicit: the ball goes out at 20; the home goalkeeper controls it from 30
+    # while placing it; the goal-kick tag only opens at 60 (strike 70). The set-up control before
+    # the tag window reads as home possession; the tag's pre-strike interval is dead.
+    evidence = "A" * 20 + "." * 10 + "H" * 40 + "H" * 30
+    x = [50.0] * 100
+    x[20:23] = [120.0] * 3
+    speed = [0.0] * 100
+    speed[70] = 9.0
+    labels, restarts = full_pipeline(evidence, speed, x,
+                                     [tag(60, 80, "Goal Kick", "Synthetic Home")], [(0, 100)])
+    assert restarts == {70: H}
+    assert labels == "A" * 20 + "D" * 10 + "H" * 30 + "D" * 10 + "H" * 30
+
+
+def test_f1_located_restart_still_ends_a_stoppage_with_the_tagged_team():
+    evidence = "H" * 20 + "." * 50 + "." * 30        # no control at all after the ball goes out
+    x = [50.0] * 100
+    x[20:23] = [120.0] * 3
+    speed = [0.0] * 100
+    speed[60] = 9.0
+    labels, _ = full_pipeline(evidence, speed, x, [tag(40, 80, "Throw-in", "Synthetic Away")],
+                              [(0, 100)])
+    assert labels == "H" * 20 + "D" * 40 + "A" * 40
+
+
+KICKOFF_HALVES = [(0, 15), (25, 40)]
+
+
+def kickoff_case(strikes, tags):
+    speed = [0.0] * 40
+    for frame in strikes:
+        speed[frame] = 9.0
+    return full_pipeline("." * 40, speed, [50.0] * 40, tags, KICKOFF_HALVES)
+
+
+SPANNING = tag(2, 35, "Kick Off (Start)", "Synthetic Home")
+
+
+def test_f5_kickoff_tag_spanning_both_halves_strike_in_first_half_only_codex_scenario():
+    labels, restarts = kickoff_case([8], [SPANNING])
+    assert restarts == {8: H}                        # no projected restart at 25
+    assert labels == "D" * 8 + "H" * 7 + "X" * 10 + "X" * 15
+
+
+def test_f5_kickoff_tag_spanning_both_halves_strike_in_second_half_only():
+    labels, restarts = kickoff_case([30], [SPANNING])
+    assert restarts == {30: H}
+    # First half: only the frames before the tag are dead, and D persists with no control.
+    assert labels == "D" * 15 + "X" * 10 + "D" * 5 + "H" * 10
+
+
+def test_f5_kickoff_tag_spanning_both_halves_strike_in_each_half():
+    labels, restarts = kickoff_case([8, 30], [SPANNING])
+    assert restarts == {8: H, 30: H}
+    assert labels == "D" * 8 + "H" * 7 + "X" * 10 + "D" * 5 + "H" * 10
+
+
+def test_f5_kickoff_tag_spanning_both_halves_without_a_strike():
+    labels, restarts = kickoff_case([], [SPANNING])
+    assert restarts == {}
+    assert labels == "D" * 15 + "X" * 10 + "X" * 15     # nothing marked in the second half
+
+
+def test_f5_ordinary_kickoff_tags_one_per_half():
+    tags = [tag(2, 12, "Kick Off (Start)", "Synthetic Home"),
+            tag(26, 36, "Kick Off (Start)", "Synthetic Away")]
+    labels, restarts = kickoff_case([8, 33], tags)
+    assert restarts == {8: H, 33: A}
+    assert labels == "D" * 8 + "H" * 7 + "X" * 10 + "D" * 8 + "A" * 7
+
+
+def test_f5_kickoff_struck_just_before_the_half_block_is_not_moved_into_it():
+    # Phase 4F: a strike in the ungraded frames before a half is rejected, never placed at the
+    # half's first frame. The half stays unknown until control evidence establishes a team.
+    labels, restarts = kickoff_case([23], [tag(16, 35, "Kick Off (Start)", "Synthetic Away")])
+    assert restarts == {}
+    assert labels == "X" * 40
+
+
+def test_f5_set_piece_strike_is_never_read_from_the_previous_half():
+    # A set piece spanning halftime: struck in the first half only, never re-used in the second.
+    speed = [0.0] * 40
+    speed[10] = 9.0
+    dead, restarts = ps.game_evidence(tracking(40, speed), [tag(4, 32, "Free Kick", "Synthetic Home")],
+                                      NAMES, KICKOFF_HALVES, game=G)
+    assert restarts == {10: H}
+    assert dead[4:10].all() and not dead[10:].any()
+
+
+def test_f9_duplicate_frame_does_not_inherit_ball_speed_from_an_earlier_row(meta_path, write_raw):
+    far, near = group(0.9, 0.9), group(0.5, 0.5)
+    lines = [raw_line(1, [far] * 5, group(0.5, 0.5, 9.0)),
+             raw_line(1, [far, near] + [far] * 3, "0.5,0.5,abc")]   # later row, bad speed
+    trk = ps.read_tracking(write_raw(lines), bl.team_of_each_track(meta_path), 3)
+    assert trk.home[0] == 0.0                        # player distances from the later row
+    assert np.isnan(trk.ball_speed[0])               # and no speed inherited from the earlier row
+
+
+def test_f9_duplicate_frame_later_valid_row_wins_whole(meta_path, write_raw):
+    far, near = group(0.9, 0.9), group(0.5, 0.5)
+    lines = [raw_line(1, [far] * 5, group(0.5, 0.5, 9.0)),
+             raw_line(1, [far, near] + [far] * 3, group(0.5, 0.5, 1.0))]
+    trk = ps.read_tracking(write_raw(lines), bl.team_of_each_track(meta_path), 3)
+    assert trk.home[0] == 0.0 and trk.ball_speed[0] == 1.0
+
+
+# Phase 4F: a restart strike counts only inside the graded half it is assigned to -----------------
+
+@pytest.mark.parametrize("type_, team", [
+    ("Free Kick", "Synthetic Home"), ("Corner Kick", "Synthetic Away"),
+    ("Goal Kick", "Synthetic Home"), ("Throw-in", None), ("Kick Off (After Goal)", None),
+    ("Kick Off (Start)", "Synthetic Home"),
+])
+def test_4f_pre_half_strike_cannot_create_possession_in_the_half_codex_a(type_, team):
+    # Codex example A for every restart type, known and unknown teams: struck at 20, between
+    # the halves [0, 15) and [25, 40); no control anywhere.
+    labels, restarts = kickoff_case([20], [tag(15, 26, type_, team)])
+    assert restarts == {}
+    assert labels == "X" * 40          # no control observations alone establish a team
+
+
+def test_4f_distant_pre_half_strike_cannot_create_2000_frames_codex_b():
+    n, halves = 3000, [(0, 15), (1000, 3000)]
+    speed = [0.0] * n
+    speed[20] = 9.0
+    labels, restarts = full_pipeline("." * n, speed, [50.0] * n,
+                                     [tag(15, 1001, "Free Kick", "Synthetic Home")], halves)
+    assert restarts == {}
+    assert labels == "X" * n
+
+
+def test_4f_overlapping_kickoff_with_two_strikes_does_not_contaminate_the_next_half_codex_c():
+    labels, restarts = kickoff_case([8, 20], [SPANNING])
+    assert restarts == {8: H}
+    assert labels == "D" * 8 + "H" * 7 + "X" * 10 + "X" * 15
+
+
+def test_4f_legitimate_strike_inside_a_half_is_still_detected():
+    labels, restarts = kickoff_case([30], [tag(24, 36, "Free Kick", "Synthetic Away")])
+    assert restarts == {30: A}
+    assert labels == "X" * 25 + "D" * 5 + "A" * 10   # in-half window before the strike: D
+
+
+def test_4f_independent_kickoffs_in_both_halves():
+    tags = [tag(2, 12, "Kick Off (Start)", "Synthetic Home"),
+            tag(26, 36, "Kick Off (Start)", "Synthetic Away")]
+    labels, restarts = kickoff_case([8, 33], tags)
+    assert restarts == {8: H, 33: A}
+    assert labels == "D" * 8 + "H" * 7 + "X" * 10 + "D" * 8 + "A" * 7
+
+
+def test_4f_strike_exactly_at_the_half_start_counts_ungraded_frames_give_stillness_only():
+    # Still ball over the ungraded frames 16..24, struck at 25 = the half's first frame.
+    labels, restarts = kickoff_case([25], [tag(16, 35, "Kick Off (Start)", "Synthetic Away")])
+    assert restarts == {25: A}
+    assert labels == "X" * 25 + "A" * 15
+
+
+def test_4f_strike_at_the_exclusive_half_end_is_not_in_the_half():
+    labels, restarts = kickoff_case([15], [tag(2, 20, "Free Kick", "Synthetic Home")])
+    assert restarts == {}
+    assert labels == "X" * 40
+    labels, restarts = kickoff_case([14], [tag(2, 20, "Free Kick", "Synthetic Home")])
+    assert restarts == {14: H}                        # the half's last frame does count
+    assert labels == "X" * 2 + "D" * 12 + "H" + "X" * 25

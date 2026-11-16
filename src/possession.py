@@ -13,13 +13,16 @@ Five separate stages:
          Tagging set-piece window before the ball is struck, and pre-kickoff frames of a half;
        * restarts: the frame a set piece's ball is struck, with the tagged team when it maps.
   4. Possession state (`infer_states`), run independently per half from an unknown state:
-       * a team takes possession after CONFIRM consecutive control frames, backdated to the run;
+       * a team takes possession after CONFIRM control observations of its own with no tracked
+         frame contradicting them, backdated to the first; missing-ball frames pause the count,
+         but a dropout of CONFIRM frames or more resets it (so a run spans at least CONFIRM
+         frames, and more when it bridges short dropouts);
        * held through ball flight, contested frames and missing-ball gaps up to MAX_GAP;
        * a confirmed dead frame ends the possession (state D), and D persists -- also through
          missing-ball frames -- until a restart; a restart sets the tagged team, or leaves the
          team open and backdates the first established team to the restart frame;
-       * without a tagged restart ahead -- or once this stoppage's own set-piece tag has passed
-         without a locatable strike -- sustained control also ends a stoppage.
+       * sustained control outside confirmed-dead frames also ends a stoppage; a future restart
+         never vetoes it.
 
 Ball speed: the official starter (`starter/baseline.py`) describes every raw group, the ball's
 included, as "x,y,speed", and the official DATA.md says the ATD gives "the position and speed of
@@ -36,7 +39,6 @@ src/baseline.py) but keeps each team's nearest distance and the ball's position 
 """
 
 import argparse
-import bisect
 import os
 import sys
 import xml.etree.ElementTree as ET
@@ -91,8 +93,8 @@ GAME_DEFAULTS = GameParams(
     out_confirm_frames=3,             # tracked frames out in a row before it is confirmed
     restart_speed_mps=4.0,            # m/s: a struck/thrown ball, not one placed or carried
     restart_still_frames=5,           # tracked slow frames needed before the strike
-    stoppage_lookahead_frames=90 * FPS,  # frames: wait this long for a tagged restart
-)
+    stoppage_lookahead_frames=90 * FPS,  # frames: NOT USED since Phase 4D (see _run_segment);
+)                                        # kept so the documented defaults stay unchanged
 
 Tracking = namedtuple("Tracking", "home away ball_x ball_y ball_speed")
 
@@ -137,13 +139,18 @@ def read_tracking(raw_path, team_of_track, n_frames, pitch=PITCH):
                 if distance < best[team]:
                     best[team] = distance
 
-            frame = int(parts[0]) - 1  # frame_id counts from 1, submissions from 0
+            try:
+                frame = int(parts[0]) - 1  # frame_id counts from 1, submissions from 0
+            except ValueError:
+                continue
+            if not 0 <= frame < n_frames:  # never wrap a bad id onto another frame
+                continue
             home[frame], away[frame] = best[HOME], best[AWAY]
             ball_x[frame], ball_y[frame] = bx, by
             try:
                 ball_speed[frame] = float(speed)
-            except ValueError:
-                pass
+            except ValueError:  # unreadable speed: unknown, never a value from a duplicate row
+                ball_speed[frame] = np.nan
     return Tracking(home, away, ball_x, ball_y, ball_speed)
 
 
@@ -182,31 +189,43 @@ def control_evidence(d_home, d_away, params=DEFAULTS):
 
 # -- 3. dead-ball and restart evidence -----------------------------------------------------------
 
-def out_of_bounds(ball_x, ball_y, pitch=PITCH, game=GAME_DEFAULTS):
+def out_of_bounds(ball_x, ball_y, pitch=PITCH, game=GAME_DEFAULTS, segments=None):
     """Confirmed-dead mask: the ball tracked beyond a pitch line by more than the tolerance, for
     out_confirm_frames tracked frames in a row (missing frames pause the count). Marks the
-    tracked out frames of a confirmed run, from its first one."""
+    tracked out frames of a confirmed run, from its first one.
+
+    With segments (halves), the count runs inside each segment only and frames outside them stay
+    False: a run never carries across halftime.
+    """
     length, width = pitch
     tol = game.out_tolerance_m
     x, y = np.asarray(ball_x, float), np.asarray(ball_y, float)
     with np.errstate(invalid="ignore"):
         out = (x < -tol) | (x > length + tol) | (y < -tol) | (y > width + tol)
     seen = ~np.isnan(x)
+    if segments is None:
+        segments = [(0, len(x))]
 
     dead = np.zeros(len(x), dtype=bool)
-    run_start, count = 0, 0
-    for i in np.flatnonzero(seen):
+    for lo, hi in segments:
+        lo, hi = max(0, lo), min(len(x), hi)
+        _mark_out_runs(out, seen, lo, hi, game.out_confirm_frames, dead)
+    return dead
+
+
+def _mark_out_runs(out, seen, lo, hi, confirm, dead):
+    run_start, count = lo, 0
+    for i in lo + np.flatnonzero(seen[lo:hi]):
         if not out[i]:
             count = 0
             continue
         if count == 0:
             run_start = i
         count += 1
-        if count == game.out_confirm_frames:             # confirmed: mark the run so far
+        if count == confirm:                             # confirmed: mark the run so far
             dead[run_start:i + 1] = out[run_start:i + 1]
-        elif count > game.out_confirm_frames:
+        elif count > confirm:
             dead[i] = True
-    return dead
 
 
 def locate_restart(start, end, ball_speed, game=GAME_DEFAULTS):
@@ -228,25 +247,48 @@ def locate_restart(start, end, ball_speed, game=GAME_DEFAULTS):
     return None
 
 
+def _strike_in_segment(tag, lo, hi, previous, ball_speed, game):
+    """Strike of `tag` belonging to segment [lo, hi), or None.
+
+    The search covers the tag's frames from the end of the previous segment (`previous`) to hi,
+    so it never reads another half. The ungraded frames just before lo serve only as context for
+    the still ball before a strike; the strike itself must lie in [lo, hi), and one found in the
+    ungraded frames is rejected, never moved into the segment. A tag that does not overlap the
+    segment gives None.
+    """
+    if not (tag.start_frame < hi and tag.end_frame > lo):
+        return None
+    strike = locate_restart(max(tag.start_frame, previous), min(tag.end_frame, hi), ball_speed,
+                            game)
+    return strike if strike is not None and lo <= strike < hi else None
+
+
 def game_evidence(tracking, tags, names, segments, pitch=PITCH, game=GAME_DEFAULTS):
     """(dead mask, {restart frame: HOME | AWAY | UNKNOWN}) from tracking and Smart Tagging tags.
 
     * Out-of-bounds frames are confirmed dead.
-    * Each SET PIECES tag whose strike is located gives a restart at the strike, and the frames
-      from the tag start to the strike are dead. Unlocated tags are dropped. Several tags on
-      the same strike merge; tagged teams that disagree make the team unknown.
-    * Each segment (half) is dead from its start to its first Kick Off (Start) strike. If that
-      strike cannot be located, only the frames before the kickoff tag are marked dead.
+    * Each SET PIECES tag is searched for a strike separately in every segment (half) it
+      overlaps (see _strike_in_segment). A located strike gives a restart, and the tag's frames
+      in that segment before the strike are dead. Unlocated tags add nothing. Several tags on
+      the same strike merge, independently of tag order and duplicates: the team is the one
+      known team they name, and unknown when they name none or both.
+    * Each segment is dead from its start to its first Kick Off (Start) strike in that segment.
+      If that strike cannot be located, only the segment's frames before the kickoff tag are
+      marked dead.
     """
     n = len(tracking.ball_x)
-    dead = out_of_bounds(tracking.ball_x, tracking.ball_y, pitch, game)
-    restarts = {}
+    dead = out_of_bounds(tracking.ball_x, tracking.ball_y, pitch, game, segments)
+    known = {}  # restart frame -> set of known teams tagged on it
+    bounds = []  # (lo, hi, end of the previous segment)
+    previous = 0
+    for lo, hi in sorted(segments):
+        bounds.append((max(0, lo), min(n, hi), previous))
+        previous = min(n, hi)
 
     def add_restart(frame, team):
-        if frame not in restarts or restarts[frame] == UNKNOWN:
-            restarts[frame] = team
-        elif team != UNKNOWN and team != restarts[frame]:
-            restarts[frame] = UNKNOWN  # contradictory tags
+        known.setdefault(frame, set())
+        if team != UNKNOWN:
+            known[frame].add(team)
 
     def side(tag):
         index = smart_tagging.match_team(tag.team, names)
@@ -254,42 +296,31 @@ def game_evidence(tracking, tags, names, segments, pitch=PITCH, game=GAME_DEFAUL
 
     pieces = smart_tagging.set_pieces(tags)
     for tag in pieces:
-        strike = locate_restart(tag.start_frame, tag.end_frame, tracking.ball_speed, game)
-        if strike is not None:
-            dead[max(0, tag.start_frame):strike] = True
-            add_restart(strike, side(tag))
+        for lo, hi, previous in bounds:
+            strike = _strike_in_segment(tag, lo, hi, previous, tracking.ball_speed, game)
+            if strike is not None:
+                dead[max(lo, tag.start_frame):strike] = True
+                add_restart(strike, side(tag))
 
     kickoffs = sorted((tag for tag in pieces if tag.type == smart_tagging.KICKOFF_START),
                       key=lambda tag: tag.start_frame)
-    for lo, hi in segments:
+    for lo, hi, previous in bounds:
         tag = next((t for t in kickoffs if t.start_frame < hi and t.end_frame > lo), None)
         if tag is None:
             continue  # no kickoff tag: the half starts unknown, nothing is invented
-        strike = locate_restart(tag.start_frame, tag.end_frame, tracking.ball_speed, game)
+        strike = _strike_in_segment(tag, lo, hi, previous, tracking.ball_speed, game)
         if strike is None:
             dead[lo:min(hi, max(lo, tag.start_frame))] = True
         else:
-            strike = min(max(strike, lo), hi - 1)
             dead[lo:strike] = True
             add_restart(strike, side(tag))
 
+    restarts = {frame: next(iter(teams)) if len(teams) == 1 else UNKNOWN
+                for frame, teams in known.items()}
     for frame in restarts:  # the strike itself is live
         if 0 <= frame < n:
             dead[frame] = False
     return dead, restarts
-
-
-def missed_restarts(tracking, tags, game=GAME_DEFAULTS):
-    """Mask of the frames covered by SET PIECES windows whose strike could not be located.
-
-    A stoppage that has passed such a window has lost its own restart, so it must not wait for a
-    later stoppage's restart (see _run_segment).
-    """
-    mask = np.zeros(len(tracking.ball_speed), dtype=bool)
-    for tag in smart_tagging.set_pieces(tags):
-        if locate_restart(tag.start_frame, tag.end_frame, tracking.ball_speed, game) is None:
-            mask[max(0, tag.start_frame):max(0, tag.end_frame)] = True
-    return mask
 
 
 # -- 4. possession state machine ----------------------------------------------------------------
@@ -298,32 +329,20 @@ def _held(state):
     return {HOME: SRC_CARRIED, AWAY: SRC_CARRIED, DEAD: SRC_DEAD}.get(state, SRC_UNKNOWN)
 
 
-def _run_segment(evidence, lo, hi, params, state_out, source_out, dead, restarts, lookahead,
-                 missed_count=None):
+def _run_segment(evidence, lo, hi, params, state_out, source_out, dead, restarts):
     """State machine on [lo, hi); starts UNKNOWN and shares nothing outside the segment.
 
-    missed_count is the cumulative count of missed-restart frames (len n + 1), or None.
+    A stoppage (state D) ends at a restart, or on sustained control outside confirmed-dead
+    frames. Future restarts never veto present control: the only dead-ball evidence a restart
+    contributes is its own tag-supported pre-strike interval, which is in the dead mask.
     """
-    restart_frames = sorted(f for f in restarts if lo <= f < hi)
     state = UNKNOWN
     candidate, run_start, run_length = None, 0, 0
     gap = 0
     floor = None  # frame of a restart whose team is unknown: the first team is backdated to it
-    onset = lo    # first frame of the current stoppage
-
-    def waits_for_restart(i):
-        """In a stoppage: is a tagged restart coming that can still be this stoppage's own?"""
-        if not restart_frames or bisect.bisect_right(restart_frames, i + lookahead) == \
-                bisect.bisect_right(restart_frames, i):
-            return False
-        # A set-piece window inside this stoppage whose strike was not found means its restart
-        # was missed; a later restart belongs to another stoppage.
-        return missed_count is None or missed_count[i + 1] == missed_count[onset]
 
     for i in range(lo, hi):
         if dead is not None and dead[i]:                 # confirmed stoppage ends possession
-            if state != DEAD:
-                onset = i
             state, candidate, floor, gap = DEAD, None, None, 0
             state_out[i], source_out[i] = DEAD, SRC_DEAD
             continue
@@ -337,9 +356,11 @@ def _run_segment(evidence, lo, hi, params, state_out, source_out, dead, restarts
         seen = evidence[i]
         if seen == NO_BALL:
             gap += 1
+            if gap >= params.confirm_frames:             # a pending run survives only short
+                candidate = None                         # dropouts: no disconnected evidence
             if state != DEAD and gap > params.max_gap_frames:   # too long to carry over
                 state, candidate, floor = UNKNOWN, None, None
-            state_out[i] = state                         # a pending run is paused, not reset
+            state_out[i] = state                         # (established possession is held)
             source_out[i] = SRC_GAP if state in (HOME, AWAY) else _held(state)
         else:
             gap = 0
@@ -349,9 +370,6 @@ def _run_segment(evidence, lo, hi, params, state_out, source_out, dead, restarts
             elif seen == state:                          # current team confirmed again
                 candidate = None
                 state_out[i], source_out[i] = state, SRC_CONTROL
-            elif state == DEAD and waits_for_restart(i):
-                candidate = None                         # its tagged restart is coming: wait
-                state_out[i], source_out[i] = DEAD, SRC_DEAD
             else:                                        # another team (or a first team)
                 if seen != candidate:
                     candidate, run_start, run_length = seen, i, 0
@@ -370,23 +388,19 @@ def _run_segment(evidence, lo, hi, params, state_out, source_out, dead, restarts
             source_out[i] = SRC_RESTART
 
 
-def infer_states(evidence, params=DEFAULTS, segments=None, dead=None, restarts=None,
-                 game=GAME_DEFAULTS, missed=None):
+def infer_states(evidence, params=DEFAULTS, segments=None, dead=None, restarts=None):
     """(state, source) per frame. Each (start, stop) segment runs independently from UNKNOWN.
 
     segments=None means one segment over everything; frames outside all segments are UNKNOWN.
-    dead (bool mask), restarts ({frame: team}) and missed (bool mask, see missed_restarts) are the
-    Phase 3B evidence; without them the behaviour is exactly Phase 3A's.
+    dead (bool mask) and restarts ({frame: team}) are the Phase 3B evidence; without them the
+    behaviour is exactly Phase 3A's.
     """
     n = len(evidence)
     state = np.full(n, UNKNOWN, dtype=np.int8)
     source = np.full(n, SRC_UNKNOWN, dtype=np.int8)
-    missed_count = None
-    if missed is not None:
-        missed_count = np.concatenate(([0], np.cumsum(np.asarray(missed, dtype=bool))))
     for lo, hi in (segments if segments is not None else [(0, n)]):
         _run_segment(evidence, max(0, lo), min(n, hi), params, state, source, dead,
-                     restarts or {}, game.stoppage_lookahead_frames, missed_count)
+                     restarts or {})
     return state, source
 
 
@@ -409,8 +423,7 @@ def build_labels(meta_path, raw_path, n_frames=N_VIDEO_FRAMES, params=DEFAULTS, 
     dead, restarts = game_evidence(tracking, tags, team_names(meta_path),
                                    segments if segments is not None else [(0, n_frames)],
                                    pitch, game)
-    missed = missed_restarts(tracking, tags, game)
-    state, _ = infer_states(evidence, params, segments, dead, restarts, game, missed)
+    state, _ = infer_states(evidence, params, segments, dead, restarts)
     return to_labels(state)
 
 

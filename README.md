@@ -113,15 +113,21 @@ All tests use small, artificial tracking and Smart Tagging files built inside th
    - **dead:** the ball is tracked beyond a line; the pre-strike part of a `SET PIECES` tag; the
      time before each half's kickoff;
    - **restart:** the frame where the ball is struck, with the tagged team when it maps to one.
+     A strike counts only inside the half it belongs to; one found before a half starts is
+     rejected, so that half stays unknown until control establishes a team.
 4. **Possession state:** each half runs on its own.
-   - A team gets possession after 10 consecutive control frames, backdated to the first of them.
+   - A team gets possession after 10 control observations of its own, with no tracked frame
+     contradicting them, backdated to the first. Untracked frames pause the count unless the
+     dropout reaches 10 frames, so a run spans at least 0.4 s and possibly longer.
    - Possession is held through loose balls and short tracking gaps.
-   - A dead ball ends it; a restart starts the next one.
+   - A dead ball ends it; a restart, or sustained control outside dead frames, starts the next
+     one. A future restart never vetoes present control.
 5. **Output:** `H`, `A` or `D` inside the halves, and `X` outside them or where no possession can
    be established.
 
-All nine parameters were chosen in advance from football reasoning. None was fitted to, or
-checked against, the competition match. See the technical document for each value and its reason.
+All nine parameters were chosen in advance from football reasoning; one
+(`stoppage_lookahead_frames`) is no longer used and is kept only so the defaults are unchanged.
+None was fitted to, or checked against, the competition match. See the technical document for each value and its reason.
 
 ## Competition rules we follow
 
