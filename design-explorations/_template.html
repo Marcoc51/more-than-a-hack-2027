@@ -1,0 +1,49 @@
+<!doctype html>
+<!--
+  MAF FC design-exploration template (explore-design brand init, UI0, 2026-11-16).
+  Chrome only: page header, variant sections, decision row. Brand: see _brand.md (provisional).
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MAF FC Explorations</title>
+<style>
+:root{--maf-paper:#F5F3EE;--maf-surface:#FFFFFF;--maf-ink:#16191D;--maf-muted:#5D6470;--maf-rule:#DAD6CD;--maf-green:#0F6B4A;--maf-gold:#B5841A;
+--f-head:"Space Grotesk","Segoe UI",system-ui,-apple-system,sans-serif;--f-body:"Inter","Segoe UI",system-ui,-apple-system,sans-serif;--f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--maf-paper);color:var(--maf-ink);font:15px/1.55 var(--f-body)}
+:focus-visible{outline:2px solid var(--maf-green);outline-offset:2px}
+.page{max-width:1240px;margin:0 auto;padding:40px 16px 80px}
+.ph-mark{font:700 13px/1 var(--f-head);letter-spacing:.14em;color:var(--maf-green);text-transform:uppercase}
+.ph h1{font:700 clamp(28px,4vw,40px)/1.1 var(--f-head);margin:10px 0 8px}
+.ph p{margin:0;color:var(--maf-muted);max-width:760px}
+.meta{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:16px;font:12px/1.4 var(--f-mono);color:var(--maf-muted)}
+.variant{margin-top:56px}
+.v-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.v-letter{font:700 14px/1 var(--f-mono);background:var(--maf-ink);color:var(--maf-paper);border-radius:6px;padding:6px 9px}
+.v-head h2{font:700 24px/1.2 var(--f-head);margin:0}
+.tradeoff{margin:8px 0 14px;color:var(--maf-muted)}
+.preview{background:var(--maf-surface);border:1px solid var(--maf-rule);border-radius:16px;overflow:hidden;container-type:inline-size}
+.analysis{margin-top:12px;max-width:860px}
+.decision{margin-top:64px;border-top:2px solid var(--maf-ink);padding-top:20px}
+</style>
+</head>
+<body>
+<main class="page">
+<header class="ph">
+<div class="ph-mark">MAF FC · design exploration</div>
+<h1>{{title}}</h1>
+<p>{{subtitle}}</p>
+<div class="meta"><span>{{date}}</span><span>{{source}}</span><span>{{surface}}</span></div>
+</header>
+<section class="variant" aria-labelledby="va-title">
+<div class="v-head"><span class="v-letter">A</span><h2 id="va-title">{{variant name}}</h2></div>
+<p class="tradeoff">{{optimises for … / gives up …}}</p>
+<div class="preview">{{live preview}}</div>
+<p class="analysis">{{≤3 sentences}}</p>
+</section>
+<section class="decision"><h2>Decision</h2><p>{{If you want X → pick A …}}</p></section>
+</main>
+</body>
+</html>
