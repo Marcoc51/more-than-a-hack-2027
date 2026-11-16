@@ -1,0 +1,32 @@
+# -- restricted competition data and the official reference clone -----------------------------
+# The match data is licensed for the competition only and must never be published.
+source/
+dataset/
+data/
+*.mp4
+
+# -- generated predictions and submissions ------------------------------------------------------
+# A per-frame label file for the match is derived data: keep every one out of git.
+# Synthetic test fixtures under tests/ are deliberately NOT matched by these rules.
+outputs/
+/*.csv
+*_possession_gt*.csv
+evaluation/reports/
+scoreboard.csv
+
+# -- Python, environments, caches, logs ---------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+.ipynb_checkpoints/
+*.log
+.env
+
+# -- editors and OS -----------------------------------------------------------------------------
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

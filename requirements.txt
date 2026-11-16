@@ -1,0 +1,8 @@
+# Pinned for byte-identical reproduction of the submission file.
+# Same two runtime dependencies as the official scorer; versions match the development machine
+# (Python 3.10.4).
+numpy==1.24.1
+pandas==1.5.2
+
+# Development only: synthetic unit tests.
+pytest==7.2.0
