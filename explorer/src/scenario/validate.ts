@@ -1,6 +1,6 @@
 import type {
-  BallObservation, EventSource, Frame, Phase3bOutput, Player, Provenance, ReferenceLabels, Restart,
-  Scenario, ScenarioEvent, Smooth50Output, Team, XY,
+  BallObservation, EventSource, Frame, ModelScores, Phase3bOutput, Player, Provenance, ReferenceLabels,
+  Restart, Scenario, ScenarioEntry, ScenarioEvent, Smooth50Output, Team, XY,
 } from './types';
 
 /** Runtime check of an exported scenario. Throws ScenarioError naming the first bad field. */
@@ -64,6 +64,47 @@ function parseFrame(v: unknown, path: string, players: number): Frame {
   return { ball, players: ps.map((p, i) => (p === null ? null : xy(p, `${path}.players[${i}]`))) };
 }
 
+function unit(v: unknown, path: string): number {
+  const n = num(v, path);
+  if (n < 0 || n > 1) fail(path, 'expected a value in [0, 1]');
+  return n;
+}
+
+function parseScores(v: unknown, path: string): ModelScores {
+  const o = obj(v, path);
+  const byIou = obj(o.spellF1ByIou, `${path}.spellF1ByIou`);
+  const confusion = arr(o.confusion, `${path}.confusion`).map((row, i) => {
+    const r = arr(row, `${path}.confusion[${i}]`);
+    if (r.length !== 4) fail(`${path}.confusion[${i}]`, 'expected 4 columns');
+    return r.map((c, j) => int(c, `${path}.confusion[${i}][${j}]`));
+  });
+  if (confusion.length !== 4) fail(`${path}.confusion`, 'expected 4 rows');
+  return {
+    spellF1Mean: unit(o.spellF1Mean, `${path}.spellF1Mean`),
+    spellF1ByIou: Object.fromEntries(Object.entries(byIou).map(([k, f]) => [k, unit(f, `${path}.spellF1ByIou.${k}`)])),
+    macroF1: unit(o.macroF1, `${path}.macroF1`),
+    nReferenceSpells: int(o.nReferenceSpells, `${path}.nReferenceSpells`),
+    nPredictedSpells: int(o.nPredictedSpells, `${path}.nPredictedSpells`),
+    nGraded: int(o.nGraded, `${path}.nGraded`),
+    confusion,
+  };
+}
+
+/** generated/index.json: the list of scenarios, before any of them is loaded. */
+export function parseManifest(raw: unknown): ScenarioEntry[] {
+  const o = obj(raw, 'manifest');
+  if (o.schemaVersion !== 1) fail('manifest.schemaVersion', 'unsupported schema version');
+  return arr(o.scenarios, 'manifest.scenarios').map((e, i) => {
+    const eo = obj(e, `manifest.scenarios[${i}]`);
+    return {
+      id: str(eo.id, `scenarios[${i}].id`), title: str(eo.title, `scenarios[${i}].title`),
+      description: str(eo.description, `scenarios[${i}].description`),
+      frameCount: int(eo.frameCount, `scenarios[${i}].frameCount`, 1), fps: int(eo.fps, `scenarios[${i}].fps`, 1),
+      file: str(eo.file, `scenarios[${i}].file`),
+    };
+  });
+}
+
 export function parseScenario(raw: unknown): Scenario {
   const o = obj(raw, 'scenario');
   if (o.schemaVersion !== 1) fail('schemaVersion', 'unsupported schema version');
@@ -79,6 +120,10 @@ export function parseScenario(raw: unknown): Scenario {
     generatorVersion: str(p.generatorVersion, 'provenance.generatorVersion'),
     engineCommit: str(p.engineCommit, 'provenance.engineCommit'),
     engineFiles: Object.fromEntries(Object.entries(files).map(([k, v]) => [k, str(v, `engineFiles.${k}`)])),
+    scorer: (() => {
+      const sc = obj(p.scorer, 'provenance.scorer');
+      return { file: str(sc.file, 'scorer.file'), source: str(sc.source, 'scorer.source'), sha256: str(sc.sha256, 'scorer.sha256') };
+    })(),
     statement: str(p.statement, 'provenance.statement'),
   };
 
@@ -157,6 +202,7 @@ export function parseScenario(raw: unknown): Scenario {
     }),
     nearestHome: distances(p3.nearestHome, 'models.phase3b.nearestHome'),
     nearestAway: distances(p3.nearestAway, 'models.phase3b.nearestAway'),
+    scores: parseScores(p3.scores, 'models.phase3b.scores'),
   };
   const sm = obj(m.smooth50, 'models.smooth50');
   const smooth50: Smooth50Output = {
@@ -164,6 +210,7 @@ export function parseScenario(raw: unknown): Scenario {
     producer: str(sm.producer, 'models.smooth50.producer'),
     labels: labelString(sm.labels, 'models.smooth50.labels', frameCount, 'HADX'),
     nearestTeam: labelString(sm.nearestTeam, 'models.smooth50.nearestTeam', frameCount, 'HA-'),
+    scores: parseScores(sm.scores, 'models.smooth50.scores'),
   };
 
   // Frame alignment: the engine saw no ball exactly where the frame has no ball.

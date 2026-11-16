@@ -3,12 +3,10 @@
  * PROVENANCE. This file mixes two kinds of value:
  *
  * 1. MOTUS-DERIVED (Motus visual identity, Night and Floodlight themes). Re-stated by hand from
- *    the private, UNLICENSED Motus Design System tokens (youth-of-future/motus-design-system,
- *    commit 1fd5127), under MAF FC names. No Motus source file, component, logo or icon is copied
- *    or bundled. The project owner authorised the Motus visual identity for this app on
- *    2026-11-16. PERMISSION TO PUBLISH THESE VALUES IN A PUBLIC REPOSITORY HAS NOT BEEN
- *    CONFIRMED: Motus decision record 0007 limits its approval to restricted private Motus use.
- *    These values are not covered by this repository's MIT licence. They are:
+ *    the Motus Design System tokens (youth-of-future/motus-design-system, commit 1fd5127), under
+ *    MAF FC names, and used with Motus's permission. No Motus source file, component, logo or
+ *    icon is copied or bundled. These values are not covered by this repository's MIT licence.
+ *    They are:
  *      - palette: --maf-volt, -volt-400, -volt-600, -night-pitch, -ink, -graphite, -steel, -slate,
  *        -fog, -mist, -floodlight, -white, -watch;
  *      - semantic colours in both theme blocks: -bg, -bg-sunken, -surface, -surface-raised,

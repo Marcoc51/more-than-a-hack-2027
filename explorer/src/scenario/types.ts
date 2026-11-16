@@ -49,7 +49,22 @@ export interface Provenance {
   generatorVersion: string;
   engineCommit: string;
   engineFiles: Readonly<Record<string, string>>;
+  /** The organisers' public scorer, vendored unchanged, used for the synthetic scores. */
+  scorer: { file: string; source: string; sha256: string };
   statement: string;
+}
+
+/** Output of the official scorer (tools/vendor/possession_metrics.py evaluate()), computed
+ *  offline with the scenario's script reference as the ground truth. Synthetic only. */
+export interface ModelScores {
+  spellF1Mean: number;
+  spellF1ByIou: Readonly<Record<string, number>>;
+  macroF1: number;
+  nReferenceSpells: number;
+  nPredictedSpells: number;
+  nGraded: number;
+  /** 4x4 counts over all frames, rows = reference H/A/D/X, columns = prediction H/A/D/X. */
+  confusion: ReadonlyArray<readonly number[]>;
 }
 
 export interface Restart {
@@ -70,6 +85,7 @@ export interface Phase3bOutput {
   /** Engine-computed nearest player distance to the ball per team (m); null = not available. */
   nearestHome: ReadonlyArray<number | null>;
   nearestAway: ReadonlyArray<number | null>;
+  scores: ModelScores;
 }
 
 /** Official smooth50 baseline output: labels plus its per-frame nearest team before smoothing. */
@@ -79,6 +95,17 @@ export interface Smooth50Output {
   labels: string;
   /** 'H' | 'A' | '-' (no ball) per frame. */
   nearestTeam: string;
+  scores: ModelScores;
+}
+
+/** One entry of generated/index.json: enough to list a scenario before loading it. */
+export interface ScenarioEntry {
+  id: string;
+  title: string;
+  description: string;
+  frameCount: number;
+  fps: number;
+  file: string;
 }
 
 export interface ReferenceLabels {

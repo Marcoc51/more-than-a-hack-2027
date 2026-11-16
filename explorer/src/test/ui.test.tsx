@@ -1,33 +1,31 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { App } from '../App';
 import { runs } from '../scenario/labels';
-import { SCENARIOS } from '../scenario/scenarios';
-import type { Scenario } from '../scenario/types';
 import { ownsKey } from '../playback/useKeyboardShortcuts';
+import { S1, S2, renderLoaded } from './util';
 
-const s1 = SCENARIOS[0]!;
+const s1 = S1;
 const frameText = () => screen.getByTestId('readout').textContent ?? '';
 const seekTo = (frame: number) => fireEvent.change(screen.getByRole('slider', { name: 'Frame' }), { target: { value: String(frame) } });
 
 describe('Explorer app', () => {
-  it('shows the MAF FC brand, the synthetic-data indicator and no logo image', () => {
-    render(<App scenarios={SCENARIOS} />);
+  it('shows the MAF FC brand, the synthetic-data indicator and no logo image', async () => {
+    await renderLoaded();
     expect(screen.getByText('MAF FC')).toBeInTheDocument();
     expect(screen.getByText('Synthetic data')).toBeInTheDocument();
     expect(document.querySelector('img')).toBeNull();
     expect(screen.getByRole('banner').textContent).not.toMatch(/motus/i);
   });
 
-  it('loads the scenario and its provenance', () => {
-    render(<App scenarios={SCENARIOS} />);
+  it('loads the scenario and its provenance', async () => {
+    await renderLoaded();
     expect(screen.getByRole('radio', { name: /S1/ })).toBeChecked();
     expect(screen.getByText('Data provenance')).toBeInTheDocument();
     expect(screen.getByText(s1.provenance.engineCommit.slice(0, 7))).toBeInTheDocument();
   });
 
-  it('draws players and the ball from the fixture coordinates', () => {
-    render(<App scenarios={SCENARIOS} />);
+  it('draws players and the ball from the fixture coordinates', async () => {
+    await renderLoaded();
     const first = s1.frames[0]!;
     const p = first.players[0]!;
     expect(screen.getByTestId(`player-${s1.players[0]!.id}`)).toHaveAttribute('transform', `translate(${p[0]} ${p[1]})`);
@@ -37,8 +35,8 @@ describe('Explorer app', () => {
     expect(screen.getByTestId(`player-${s1.players[0]!.id}`)).toHaveAttribute('transform', `translate(${later[0]} ${later[1]})`);
   });
 
-  it('marks a missing ball and omits untracked players', () => {
-    render(<App scenarios={SCENARIOS} />);
+  it('marks a missing ball and omits untracked players', async () => {
+    await renderLoaded();
     const noBall = s1.frames.findIndex((f) => f.ball === null);
     seekTo(noBall);
     expect(screen.queryByTestId('ball')).toBeNull();
@@ -49,8 +47,8 @@ describe('Explorer app', () => {
     expect(screen.queryByTestId(`player-${missing.id}`)).toBeNull();
   });
 
-  it('renders every timeline track with exact segment boundaries', () => {
-    render(<App scenarios={SCENARIOS} />);
+  it('renders every timeline track with exact segment boundaries', async () => {
+    await renderLoaded();
     for (const id of ['reference', 'phase3b', 'smooth50', 'evidence', 'ball']) {
       expect(screen.getByTestId(`track-${id}`)).toBeInTheDocument();
     }
@@ -63,16 +61,16 @@ describe('Explorer app', () => {
     });
   });
 
-  it('shows the H/A/D/X legend with names, not colour alone', () => {
-    render(<App scenarios={SCENARIOS} />);
+  it('shows the H/A/D/X legend with names, not colour alone', async () => {
+    await renderLoaded();
     const legend = screen.getByLabelText('Legend');
     for (const name of ['Home possession', 'Away possession', 'Dead ball', 'No answer']) {
       expect(within(legend).getByText(name)).toBeInTheDocument();
     }
   });
 
-  it('keeps pitch, timeline, transport and inspector on the same frame', () => {
-    render(<App scenarios={SCENARIOS} />);
+  it('keeps pitch, timeline, transport and inspector on the same frame', async () => {
+    await renderLoaded();
     seekTo(200);
     expect(frameText()).toContain('Frame 200');
     expect(screen.getByTestId('playhead')).toHaveAttribute('data-frame', '200');
@@ -82,16 +80,16 @@ describe('Explorer app', () => {
     expect(within(inspector).getAllByLabelText(label === 'D' ? 'Dead ball' : /possession|answer/).length).toBeGreaterThan(0);
   });
 
-  it('seeks when the timeline is clicked', () => {
-    render(<App scenarios={SCENARIOS} />);
+  it('seeks when the timeline is clicked', async () => {
+    await renderLoaded();
     const bars = screen.getByTestId('timeline-bars');
     bars.getBoundingClientRect = () => ({ left: 0, width: 400, top: 0, height: 100, right: 400, bottom: 100, x: 0, y: 0, toJSON: () => ({}) });
     fireEvent.click(bars, { clientX: 250.7 });
     expect(frameText()).toContain('Frame 250');
   });
 
-  it('labels engine evidence, annotations and UI text separately', () => {
-    render(<App scenarios={SCENARIOS} />);
+  it('labels engine evidence, annotations and UI text separately', async () => {
+    await renderLoaded();
     seekTo(100);
     const inspector = screen.getByRole('complementary', { name: 'Frame inspector' });
     expect(within(inspector).getByText('Phase 3B output')).toBeInTheDocument();
@@ -105,7 +103,7 @@ describe('Explorer app', () => {
 describe('keyboard shortcuts', () => {
   it('steps with arrows and Shift+arrows, and toggles with Space', async () => {
     const user = userEvent.setup();
-    render(<App scenarios={SCENARIOS} />);
+    await renderLoaded();
     await user.keyboard('{ArrowRight}{ArrowRight}');
     expect(frameText()).toContain('Frame 2');
     await user.keyboard('{Shift>}{ArrowRight}{/Shift}');
@@ -121,7 +119,7 @@ describe('keyboard shortcuts', () => {
 
   it('does not steal keys from form controls that own them', async () => {
     const user = userEvent.setup();
-    render(<App scenarios={SCENARIOS} />);
+    await renderLoaded();
     const select = screen.getByLabelText('Speed');
     select.focus();
     await user.keyboard('{ArrowRight}');
@@ -135,26 +133,25 @@ describe('keyboard shortcuts', () => {
 });
 
 describe('scenario switching', () => {
-  it('resets playback for the newly selected scenario', () => {
-    const s2: Scenario = { ...s1, id: 's2', title: 'Copy for the switching test', frameCount: 50, frames: s1.frames.slice(0, 50),
-      models: { phase3b: { ...s1.models.phase3b, labels: s1.models.phase3b.labels.slice(0, 50), evidence: s1.models.phase3b.evidence.slice(0, 50), reasons: s1.models.phase3b.reasons.slice(0, 50), nearestHome: s1.models.phase3b.nearestHome.slice(0, 50), nearestAway: s1.models.phase3b.nearestAway.slice(0, 50) },
-        smooth50: { ...s1.models.smooth50, labels: s1.models.smooth50.labels.slice(0, 50), nearestTeam: s1.models.smooth50.nearestTeam.slice(0, 50) } },
-      reference: null, events: [] };
-    render(<App scenarios={[s1, s2]} />);
+  it('loads the selected scenario and resets playback, with no stale data', async () => {
+    await renderLoaded();
     seekTo(300);
     expect(frameText()).toContain('Frame 300');
     act(() => screen.getByRole('radio', { name: /S2/ }).click());
-    expect(frameText()).toContain('Frame 0');
-    expect(frameText()).toContain('/ 49');
-    expect(screen.queryByTestId('track-reference')).toBeNull();
+    await screen.findByText(`/ ${S2.frameCount - 1}`, { exact: false });
+    expect(frameText()).toContain('Frame 0 ');
+    expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument();
+    const segs = screen.getByTestId('track-phase3b').querySelectorAll('.seg');
+    expect(segs).toHaveLength(runs(S2.models.phase3b.labels).length);
+    expect(screen.getByRole('radio', { name: /S2/ })).toBeChecked();
   });
 });
 
 describe('timeline seek control (A-01)', () => {
   const seekControl = () => screen.getByRole('slider', { name: 'Timeline position' });
 
-  it('is a focusable slider with an accessible name and current value', () => {
-    render(<App scenarios={SCENARIOS} />);
+  it('is a focusable slider with an accessible name and current value', async () => {
+    await renderLoaded();
     const slider = seekControl();
     expect(slider).toHaveAttribute('tabindex', '0');
     expect(slider).toHaveAttribute('aria-valuemin', '0');
@@ -165,7 +162,7 @@ describe('timeline seek control (A-01)', () => {
 
   it('seeks exactly one frame per arrow, ten with Shift, and supports Home, End, PageUp and PageDown', async () => {
     const user = userEvent.setup();
-    render(<App scenarios={SCENARIOS} />);
+    await renderLoaded();
     seekControl().focus();
     await user.keyboard('{ArrowRight}');
     expect(frameText()).toContain('Frame 1 ');      // not 2: no double handling with the global shortcut
@@ -187,7 +184,7 @@ describe('timeline seek control (A-01)', () => {
 
   it('keeps the slider value, playhead and inspector in sync', async () => {
     const user = userEvent.setup();
-    render(<App scenarios={SCENARIOS} />);
+    await renderLoaded();
     seekControl().focus();
     await user.keyboard('{End}{PageDown}');
     expect(seekControl()).toHaveAttribute('aria-valuenow', '389');
@@ -198,7 +195,7 @@ describe('timeline seek control (A-01)', () => {
 
   it('leaves Space to the global play/pause shortcut, toggling once', async () => {
     const user = userEvent.setup();
-    render(<App scenarios={SCENARIOS} />);
+    await renderLoaded();
     seekControl().focus();
     await user.keyboard(' ');
     expect(screen.getByRole('button', { name: 'Pause' })).toBeInTheDocument();
@@ -208,13 +205,13 @@ describe('timeline seek control (A-01)', () => {
 
   it('is reachable with Tab', async () => {
     const user = userEvent.setup();
-    render(<App scenarios={SCENARIOS} />);
+    await renderLoaded();
     for (let i = 0; i < 30 && document.activeElement !== seekControl(); i++) await user.tab();
     expect(seekControl()).toHaveFocus();
   });
 
-  it('pointer seeking still works and moves focus to the seek control', () => {
-    render(<App scenarios={SCENARIOS} />);
+  it('pointer seeking still works and moves focus to the seek control', async () => {
+    await renderLoaded();
     const bars = screen.getByTestId('timeline-bars');
     bars.getBoundingClientRect = () => ({ left: 10, width: 800, top: 0, height: 100, right: 810, bottom: 100, x: 10, y: 0, toJSON: () => ({}) });
     fireEvent.click(bars, { clientX: 10 + 800 * (123.5 / 400) });

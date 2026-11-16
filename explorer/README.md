@@ -1,12 +1,34 @@
 # MAF FC Possession Explorer
 
 An interactive viewer for frame-by-frame football possession (`H` home, `A` away, `D` dead ball,
-`X` no answer). It plays synthetic tracking on a 2D pitch and shows, frame by frame, the labels of
+`X` no answer). It plays synthetic tracking on a 2D pitch. Frame by frame, it shows the labels of
 the **MAF FC Phase 3B** engine and of the **official smooth50 baseline**, both computed by the
-unchanged Python code in [`../src`](../src).
+unchanged Python code in [`../src`](../src), and compares them with each scenario's scripted
+reference.
 
 **Synthetic data only.** Every scenario is scripted in [`../tools/export_scenarios.py`](../tools/export_scenarios.py).
 No competition data, video, ground truth or match prediction is read, bundled or reconstructed.
+
+## Pages
+
+| Route | What it does |
+|---|---|
+| `/explorer` | The analysis workspace: pitch, playback, five timeline tracks and the frame inspector |
+| `/compare` | Phase 3B and smooth50 against the scripted reference: frame agreement, official synthetic spellF1/macroF1, a comparison timeline, disagreement intervals, label counts and confusion matrices |
+| `/methodology` | How the engine works, how it differs from smooth50, its assumptions and limitations, and how to reproduce everything |
+
+- `/` redirects to `/explorer`, and unknown paths show a "Page not found" page.
+- The selected scenario lives in the URL (`?scenario=s2`), so it carries across pages and links
+  can be shared. `?frame=N` opens the Explorer at a frame.
+
+## Scenarios
+
+| ID | Title | What it shows |
+|---|---|---|
+| S1 | Kickoff, ball out, throw-in | Pre-match footage, a tagged kickoff, a ball out of play, a tagged throw-in, a brief opposing touch, ungraded frames |
+| S2 | Contested loose ball | A 60-frame scramble with short bursts of control for both teams before away wins the ball |
+| S3 | Ball tracking lost | 100 untracked ball frames, with an away tackle hidden inside the gap |
+| S4 | Mistimed restart tag | A throw-in whose Smart Tagging tag is placed 50 frames late, over live play |
 
 ## Run
 
@@ -25,78 +47,105 @@ npm run smoke      # browser smoke test of dist/ (needs a local Chrome, Chromium
 
 No private registry, token or backend is needed.
 
-`npm run smoke` runs `scripts/browser-smoke.mjs`. It starts `vite preview` itself and drives the
-local browser with `puppeteer-core`, which downloads no browser. Set `CHROME_PATH` if the browser
-is not in a standard location; add `-- --out <dir>` to choose where screenshots go (the default
-is a temporary folder). At 1440, 1280 and 375 px it checks:
-- loading, console errors and failed requests;
-- players and ball drawn at the fixture coordinates;
-- play, pause and restart; arrow and Shift+arrow steps;
-- scrubbing, and keyboard, mouse and touch timeline seeking;
-- changing speed while playing; stopping at the end; pausing on a hidden tab;
-- reduced motion, both themes, and that every panel shows the same frame;
-- no horizontal overflow.
+### Static hosting
 
-It exits 1 on any failure.
+The build is a static single-page app, which client-side routing needs to serve correctly:
+- Any host must serve `index.html` for `/explorer`, `/compare` and `/methodology`.
+- `vite preview` and most hosts can be configured to do this (an SPA rewrite). For hosts that
+  only serve files, such as GitHub Pages, the build also writes `dist/404.html`, a copy of
+  `index.html`, so deep links still load.
+- To deploy under a sub-path, build with `npm run build -- --base=/sub-path/`; the router uses
+  the same base.
+
+### Browser smoke test
+
+`npm run smoke` runs `scripts/browser-smoke.mjs`:
+- It starts `vite preview` itself and drives the local browser with `puppeteer-core`, which
+  downloads no browser.
+- Set `CHROME_PATH` if the browser is not in a standard location. Add `-- --out <dir>` to choose
+  where screenshots go (the default is a temporary folder).
+- It exits 1 on any failure.
+
+It checks:
+- **Every route at 1440, 1280, 768 and 375 px:** heading, document title, active link, menu
+  button visibility, no horizontal overflow, no console errors, no failed requests.
+- **Navigation:** the mobile menu (open, focus, Escape, link selection), focus moving to the new
+  heading, browser Back, deep links, and the `404.html` fallback.
+- **Explorer:** fixture coordinates, playback, keyboard and timeline seeking, speed changes, the
+  final frame, hidden tabs, panels staying in sync, scenario switching, themes, reduced motion
+  and touch targets.
+- **Compare:** seeking from a disagreement row, filtering, and opening the Explorer at a frame.
 
 ## Data
 
-`src/scenario/generated/s1.json` is generated, not written by hand:
+`src/scenario/generated/` (`s1.json` to `s4.json`, plus the `index.json` manifest) is generated,
+not written by hand:
 
 ```bash
 python tools/export_scenarios.py          # from the repository root: regenerate
-python tools/export_scenarios.py --check  # exit 1 if the committed JSON is stale
+python tools/export_scenarios.py --check  # exit 1 if any generated file is stale
 python -m pytest tools -q                 # exporter tests
 ```
 
-The exporter:
-1. scripts a 22-player scenario;
-2. writes it to a temporary folder in the raw ATD, metadata and Smart Tagging formats used by the
-   synthetic tests;
-3. runs `possession.build_labels` (default parameters) and `baseline.build_labels`.
+The exporter, for each scenario:
+1. scripts 22 players, the ball, missing observations and Smart Tagging set pieces;
+2. writes them to a temporary folder in the raw ATD, metadata and Smart Tagging formats used by
+   the synthetic tests;
+3. runs `possession.build_labels` (default parameters) and `baseline.build_labels` on the same
+   files;
+4. scores both outputs against the script reference with the organisers' public scorer, vendored
+   unchanged in [`../tools/vendor/`](../tools/vendor/).
 
-The per-frame evidence comes from the same public functions that `build_labels` composes. The
-export checks that this composition reproduces `build_labels` exactly.
+It also checks that the per-frame evidence, rebuilt from the same public functions,
+reproduces `build_labels` exactly.
 
-The output is deterministic, byte for byte. It records the commit of the engine files and their
-SHA-256 hashes. Reference labels are written down from the scenario script and kept apart from
-the model output.
+The output is deterministic, byte for byte. It records the commit of the engine files, their
+SHA-256 hashes and the scorer's source. Reference labels are written down from each script and
+kept apart from the model output.
+
+Each scenario is a separate lazily loaded chunk, so switching scenario downloads only that file.
 
 ## Structure
 
 | Path | Purpose |
 |---|---|
-| `src/scenario/` | Scenario types, the runtime validator, label helpers, UI-written explanation text, the scenario registry |
+| `src/app/` | Routes, page titles, the URL scenario selection |
+| `src/scenario/` | Types, the runtime validator, the lazy scenario registry, label helpers, comparison maths, UI-written explanations |
 | `src/playback/` | The single playback reducer, the clock, the provider (one animation loop), keyboard shortcuts |
-| `src/components/` | Pitch (SVG), Timeline, Transport, Inspector, Legend, ScenarioPanel, ThemeToggle |
-| `src/pages/ExplorerPage.tsx` | The Explorer workspace |
+| `src/components/` | AppHeader (navigation), Pitch (SVG), Timeline, Transport, Inspector, Legend, ScenarioPanel, ThemeToggle, page headings and loading states |
+| `src/pages/` | Explorer, Compare, Methodology, Not found |
 | `src/styles/` | `tokens.css` (design tokens, both themes) and `app.css` |
-| `src/test/` | Vitest suites: data, playback, UI |
+| `src/test/` | Vitest suites: data, playback, comparison, UI, pages and routing |
+| `scripts/` | The browser smoke test |
 
-Every component reads the frame from one `PlaybackProvider`. To embed the pitch and timeline
-elsewhere (for example a future Home page), wrap them in their own provider.
+Every page that plays a scenario has one `PlaybackProvider`, and every pitch, timeline and
+panel on that page reads its frame. Embedding the pitch and timeline elsewhere (for example a
+future Home page) only needs another provider.
 
-## Visual identity, licences and publication status
+**Motion:**
+- Page entrances, the navigation indicator, the mobile menu and theme changes use the token
+  durations (120 ms and 240 ms).
+- The playhead is never animated, so it always shows the exact frame.
+- `prefers-reduced-motion: reduce` removes every transition and animation; user-started
+  playback still works.
+
+## Visual identity and licences
 
 - **Brand:** the app is publicly branded **MAF FC** / **MAF FC Possession Explorer**. It shows no
-  Motus logo, name or artwork, and it is not an official Motus product.
-- **Styling:** the look follows the **Motus visual identity**: Night (dark, default) and
-  Floodlight (light) themes, Volt accent, Space Grotesk and Inter, Motus spacing, radii, control
-  sizes, motion and control conventions.
-  - The values are re-stated by hand in `src/styles/tokens.css`, whose header lists exactly
-    which values are Motus-derived and which are MAF FC originals.
-  - No Motus Design System source, component, icon, logo or font file is copied or installed.
-    The package is private, and public reviewers could not install it.
-- **Publication status: pending.**
-  - The project owner authorised the Motus visual identity for this app.
-  - Explicit permission to publish the Motus-derived values in a public repository has not yet
-    been confirmed by the Motus/Youth of Future rights holder. The design system is
-    `UNLICENSED`, and its decision record 0007 limits approval to restricted private use.
-  - Until that is confirmed, keep this branch unpublished.
-  - The Motus-derived values are not covered by this repository's MIT licence.
+  Motus logo or artwork, and it is not an official Motus product.
+- **Styling:** the look follows the **Motus visual identity**, used with Motus's permission:
+  - Night (dark, default) and Floodlight (light) themes, Volt accent;
+  - Space Grotesk and Inter;
+  - Motus spacing, radii, control sizes, motion and control conventions.
+- **Where the values live:** they are re-stated in `src/styles/tokens.css`, whose header lists
+  which values are Motus-derived and which are MAF FC originals. No Motus Design System source,
+  component, icon, logo or font file is copied or installed.
+- **Licence scope:** the Motus-derived values are not covered by this repository's MIT licence.
 - **MAF FC originals:** the possession data colours (H/A/D/X), pitch colours and all
   application code.
 - **Fonts:** Inter and Space Grotesk, from the public
   [`@fontsource-variable`](https://fontsource.org) npm packages, under the SIL Open Font Licence
   1.1. The licence texts ship in those packages.
+- **Official scorer:** `tools/vendor/possession_metrics.py`, MIT, © 2026-2027 Metrica Sports; see
+  `tools/vendor/README.md`.
 - **Code:** MIT (see [`../LICENSE`](../LICENSE)).

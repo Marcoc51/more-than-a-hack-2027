@@ -148,3 +148,117 @@ def test_reference_does_not_follow_a_changed_baseline(monkeypatch):
 
 def test_json_has_no_nan_and_is_valid(scenario):
     json.loads(ex.render(scenario))  # allow_nan=False would have raised on NaN/inf
+
+
+# UI2: four scenarios, the manifest, and the official synthetic scores -------------------------
+
+@pytest.fixture(scope="module")
+def all_scenarios():
+    return {spec.id: ex.export(spec) for spec in ex.SCENARIOS}
+
+
+def test_four_scenarios_with_stable_ids_and_a_matching_manifest(all_scenarios):
+    assert list(all_scenarios) == ["s1", "s2", "s3", "s4"]
+    manifest = ex.manifest(list(all_scenarios.values()))
+    assert [m["id"] for m in manifest["scenarios"]] == ["s1", "s2", "s3", "s4"]
+    for entry in manifest["scenarios"]:
+        s = all_scenarios[entry["id"]]
+        assert (entry["title"], entry["frameCount"], entry["fps"]) == (s["title"], s["frameCount"], s["fps"])
+        assert entry["title"] and entry["description"] == s["description"]
+
+
+def test_every_generated_file_is_deterministic_and_current():
+    first, second = ex.outputs(), ex.outputs()
+    assert first == second and len(first) == 5
+    for path, text in first.items():
+        with open(path, encoding="utf-8") as handle:
+            assert handle.read() == text, path
+
+
+@pytest.mark.parametrize("sid", ["s1", "s2", "s3", "s4"])
+def test_alignment_reference_and_grading(all_scenarios, sid):
+    s = all_scenarios[sid]
+    spec = next(sp for sp in ex.SCENARIOS if sp.id == sid)
+    n = s["frameCount"]
+    assert len(s["frames"]) == n and all(len(f["players"]) == 22 for f in s["frames"])
+    for model in s["models"].values():
+        assert len(model["labels"]) == n and set(model["labels"]) <= set("HADX")
+    p3 = s["models"]["phase3b"]
+    for frame, code in zip(s["frames"], p3["evidence"]):
+        assert (frame["ball"] is None) == (code == "_")
+    # The reference is the script's literal declaration, contiguous over every frame ...
+    assert s["reference"]["labels"] == "".join(l * (b - a) for a, b, l in spec.reference)
+    assert spec.reference[0][0] == 0 and spec.reference[-1][1] == n
+    assert all(e == b for (_, e, _), (b, _, _) in zip(spec.reference, spec.reference[1:]))
+    # ... and the graded frames are exactly the frames where the reference is not X.
+    graded = [any(a <= f < b for a, b in s["graded"]) for f in range(n)]
+    assert graded == [c != "X" for c in s["reference"]["labels"]]
+    for t in s["events"]:
+        assert 0 <= t["frame"] <= n and t["source"] in ("scenario", "smart-tagging")
+
+
+def test_s3_missing_ball_is_null_never_interpolated(all_scenarios):
+    s = all_scenarios["s3"]
+    start, end = ex.S3_GAP
+    assert end - start == 100
+    assert all(s["frames"][f]["ball"] is None for f in range(start, end))
+    assert s["frames"][start - 1]["ball"] is not None and s["frames"][end]["ball"] is not None
+    assert sum(f["ball"] is None for f in s["frames"]) == 100
+    assert all(p is not None for f in s["frames"][start:end] for p in f["players"])  # players stay tracked
+    assert s["models"]["phase3b"]["evidence"][start:end] == "_" * 100
+    assert ex.S3_GAP[0] < ex.S3_TACKLE < ex.S3_GAP[1]          # the tackle happens unseen
+
+
+def test_s4_tag_is_built_in_the_parser_format_and_is_mistimed(tmp_path):
+    spec = ex.S4
+    meta, raw, tags = ex.write_inputs(ex.PLAYERS, ex.build(spec), str(tmp_path), spec.tags)
+    parsed = ex.smart_tagging.set_pieces(ex.smart_tagging.load(tags))
+    assert [(t.type, t.team, t.start_frame, t.end_frame) for t in parsed] == \
+        [("throw-in", None, ex.S4_TAG[0], ex.S4_TAG[1])]
+    assert ex.S4_TAG[0] - ex.S4_THROW == 50                   # 50 frames after the real throw
+    ref = "".join(l * (b - a) for a, b, l in spec.reference)
+    assert set(ref[ex.S4_TAG[0]:ex.S4_TAG[1]]) == {"A"}       # live away play under the tag
+    assert ref[ex.S4_THROW - 1] == "D" and ref[ex.S4_THROW] == "A"
+
+
+def test_s4_ball_out_frame_follows_law_9_geometry():
+    frames = ex.build(ex.S4)
+    out = ex.S4_OUT
+    assert frames[out][1][1] < -ex.BALL_RADIUS <= frames[out - 1][1][1]
+
+
+def test_scores_are_the_official_scorer_output(all_scenarios):
+    pm = ex.possession_metrics
+    for s in all_scenarios.values():
+        ref = pm.label_codes(list(s["reference"]["labels"]))
+        for model in s["models"].values():
+            result = pm.evaluate(ref, pm.label_codes(list(model["labels"])))
+            scores = model["scores"]
+            assert scores["spellF1Mean"] == round(result["spell_f1_mean"], 6)
+            assert scores["macroF1"] == round(result["macro_f1"], 6)
+            assert scores["confusion"] == result["confusion"]
+            assert scores["nGraded"] == sum(c != "X" for c in s["reference"]["labels"])
+
+
+def test_vendored_scorer_is_the_pinned_public_file():
+    with open(os.path.join(ex.ROOT, ex.SCORER_FILE), "rb") as handle:
+        digest = hashlib.sha256(handle.read().replace(b"\r\n", b"\n")).hexdigest()
+    assert digest == "341bad48904b489d6e875397b27687f5d6a4d22a397f3dc8af3a00d48f16874d"
+    with open(os.path.join(ex.ROOT, "tools", "vendor", "README.md"), encoding="utf-8") as handle:
+        assert digest in handle.read()
+
+
+def test_no_restricted_path_is_opened_for_any_scenario(monkeypatch):
+    monkeypatch.setenv("MTAH_DATA_DIR", os.path.join(ex.ROOT, "dataset"))
+    opened = []
+    real_open = builtins.open
+
+    def tracking_open(path, *args, **kwargs):
+        opened.append(os.path.realpath(str(path)))
+        return real_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "open", tracking_open)
+    ex.outputs()
+    for name in ex.FORBIDDEN_DIRS:
+        banned = os.path.realpath(os.path.join(ex.ROOT, name))
+        assert not any(p == banned or p.startswith(banned + os.sep) for p in opened)

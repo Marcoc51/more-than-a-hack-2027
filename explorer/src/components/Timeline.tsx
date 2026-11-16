@@ -1,10 +1,12 @@
 import { useMemo, useRef, type KeyboardEvent, type MouseEvent } from 'react';
 import { LABELS, frameTime, labelAt, runs, type Run } from '../scenario/labels';
+import { scoredMask } from '../scenario/compare';
 import type { Scenario } from '../scenario/types';
 import { usePlayback, usePlaybackDispatch } from '../playback/PlaybackProvider';
 import { clampFrame } from '../playback/reducer';
 
-type TrackKind = 'label' | 'evidence' | 'ball';
+type TrackKind = 'label' | 'evidence' | 'ball' | 'diff';
+export type TimelineVariant = 'explorer' | 'compare';
 
 interface Track {
   id: string;
@@ -18,9 +20,16 @@ const VALUE_NAMES: Readonly<Record<TrackKind, Readonly<Record<string, string>>>>
   label: Object.fromEntries(Object.entries(LABELS).map(([k, v]) => [k, v.name])),
   evidence: { H: 'Home control', A: 'Away control', '.': 'No credible control', _: 'Ball not tracked' },
   ball: { t: 'Ball tracked', n: 'Ball not tracked' },
+  diff: { u: 'Not graded (reference X)', '=': 'Agrees with the reference', '!': 'Differs from the reference' },
 };
 
-function tracksFor(scenario: Scenario): Track[] {
+function diffValues(scenario: Scenario, labels: string): string {
+  const ref = scenario.reference?.labels ?? '';
+  const mask = scoredMask(scenario);
+  return mask.map((g, f) => (!g ? 'u' : labels[f] === ref[f] ? '=' : '!')).join('');
+}
+
+function tracksFor(scenario: Scenario, variant: TimelineVariant): Track[] {
   const { phase3b, smooth50 } = scenario.models;
   const tracks: Track[] = [];
   if (scenario.reference) {
@@ -29,6 +38,17 @@ function tracksFor(scenario: Scenario): Track[] {
   tracks.push(
     { id: 'phase3b', name: phase3b.name, origin: 'model output', kind: 'label', values: phase3b.labels },
     { id: 'smooth50', name: smooth50.name, origin: 'model output', kind: 'label', values: smooth50.labels },
+  );
+  if (variant === 'compare') {
+    if (scenario.reference) {
+      tracks.push(
+        { id: 'diff-phase3b', name: 'Phase 3B vs reference', origin: 'computed here', kind: 'diff', values: diffValues(scenario, phase3b.labels) },
+        { id: 'diff-smooth50', name: 'smooth50 vs reference', origin: 'computed here', kind: 'diff', values: diffValues(scenario, smooth50.labels) },
+      );
+    }
+    return tracks;
+  }
+  tracks.push(
     { id: 'evidence', name: 'Control evidence', origin: 'Phase 3B output', kind: 'evidence', values: phase3b.evidence },
     { id: 'ball', name: 'Ball tracking', origin: 'synthetic observation', kind: 'ball', values: scenario.frames.map((f) => (f.ball ? 't' : 'n')).join('') },
   );
@@ -38,6 +58,7 @@ function tracksFor(scenario: Scenario): Track[] {
 function segmentClass(kind: TrackKind, value: string): string {
   if (kind === 'label') return `seg seg-${value}`;
   if (kind === 'evidence') return `seg seg-ev-${{ H: 'home', A: 'away', '.': 'none', _: 'noball' }[value] ?? 'none'}`;
+  if (kind === 'diff') return `seg seg-diff-${{ u: 'ungraded', '=': 'agree', '!': 'differ' }[value] ?? 'ungraded'}`;
   return `seg seg-ball-${value === 't' ? 'yes' : 'no'}`;
 }
 
@@ -62,11 +83,10 @@ function Segments({ track, n }: { track: Track; n: number }) {
   );
 }
 
-export function Timeline({ scenario, compact = false }: { scenario: Scenario; compact?: boolean }) {
+export function Timeline({ scenario, variant = 'explorer' }: { scenario: Scenario; variant?: TimelineVariant }) {
   const { frame, frameCount } = usePlayback();
   const dispatch = usePlaybackDispatch();
-  const tracks = useMemo(() => tracksFor(scenario), [scenario]);
-  const shown = compact ? tracks.filter((t) => t.id === 'phase3b' || t.id === 'smooth50') : tracks;
+  const shown = useMemo(() => tracksFor(scenario, variant), [scenario, variant]);
   const n = frameCount;
 
   const sliderRef = useRef<HTMLDivElement>(null);
