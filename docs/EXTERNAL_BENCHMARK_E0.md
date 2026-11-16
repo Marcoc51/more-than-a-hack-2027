@@ -93,6 +93,3 @@ The repository's [root MIT license](https://github.com/SkillCorner/opendata/blob
 - Freeze match-level train/development/test IDs before fitting. Audit same-match duplicates and cross-provider overlap; seal test labels and record all transformations.
 
 **Smallest next E1A task:** resolve SkillCorner dataset-file rights and perform a documented schema/label audit on one permitted small public sample, without building an adapter or training a model until these gates pass.
-
-
-

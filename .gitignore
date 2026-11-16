@@ -1,6 +1,7 @@
 # -- restricted competition data and the official reference clone -----------------------------
 # The match data is licensed for the competition only and must never be published.
 source/
+external_samples/
 dataset/
 data/
 *.mp4

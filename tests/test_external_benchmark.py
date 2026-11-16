@@ -145,4 +145,3 @@ def test_clean_official_setup_fetches_only_pinned_public_files(tmp_path, monkeyp
     assert set(requested) == {
         "evaluation/possession_metrics.py", "starter/baseline.py", "games.py", "LICENSE"
     }
-
