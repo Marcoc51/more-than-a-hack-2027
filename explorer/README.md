@@ -13,11 +13,13 @@ No competition data, video, ground truth or match prediction is read, bundled or
 
 | Route | What it does |
 |---|---|
+| `/` | Home: the problem, a working mini-Explorer on S1 (its own playback), entry points, facts, and the competition context with the organisers' logos |
 | `/explorer` | The analysis workspace: pitch, playback, five timeline tracks and the frame inspector |
 | `/compare` | Phase 3B and smooth50 against the scripted reference: frame agreement, official synthetic spellF1/macroF1, a comparison timeline, disagreement intervals, label counts and confusion matrices |
-| `/methodology` | How the engine works, how it differs from smooth50, its assumptions and limitations, and how to reproduce everything |
+| `/methodology` | How the engine works, with three diagrams, how it differs from smooth50, its parameters and limitations, and how to reproduce everything |
+| `/team` | The four MAF FC members, with photos and LinkedIn and GitHub links (see "Team data" below) |
 
-- `/` redirects to `/explorer`, and unknown paths show a "Page not found" page.
+- Unknown paths show a "Page not found" page.
 - The selected scenario lives in the URL (`?scenario=s2`), so it carries across pages and links
   can be shared. `?frame=N` opens the Explorer at a frame.
 
@@ -50,7 +52,7 @@ No private registry, token or backend is needed.
 ### Static hosting
 
 The build is a static single-page app, which client-side routing needs to serve correctly:
-- Any host must serve `index.html` for `/explorer`, `/compare` and `/methodology`.
+- Any host must serve `index.html` for `/explorer`, `/compare`, `/methodology` and `/team`.
 - `vite preview` and most hosts can be configured to do this (an SPA rewrite). For hosts that
   only serve files, such as GitHub Pages, the build also writes `dist/404.html`, a copy of
   `index.html`, so deep links still load.
@@ -67,7 +69,7 @@ The build is a static single-page app, which client-side routing needs to serve 
 - It exits 1 on any failure.
 
 It checks:
-- **Every route at 1440, 1280, 768 and 375 px:** heading, document title, active link, menu
+- **Every route at 1440, 1280, 1024, 768, 720 and 375 px, in both themes:** heading, document title, active link, menu
   button visibility, no horizontal overflow, no console errors, no failed requests.
 - **Navigation:** the mobile menu (open, focus, Escape, link selection), focus moving to the new
   heading, browser Back, deep links, and the `404.html` fallback.
@@ -75,6 +77,14 @@ It checks:
   final frame, hidden tabs, panels staying in sync, scenario switching, themes, reduced motion
   and touch targets.
 - **Compare:** seeking from a disagreement row, filtering, and opening the Explorer at a frame.
+
+## Team data
+
+MAF FC has four members: Marc, Fahmy, Faris and Eslam. Their names and links, approved by the project owner, live in
+[`src/team/members.ts`](src/team/members.ts); no other personal details are shown.
+- Photos are 400 x 500 px WebP portraits in `public/team/`, cropped from owner-supplied images with all metadata
+  removed. A missing or broken photo falls back to the member's initial.
+- The grid has four columns on wide screens, two on tablets and one horizontal card per row on phones.
 
 ## Data
 
@@ -112,8 +122,10 @@ Each scenario is a separate lazily loaded chunk, so switching scenario downloads
 | `src/app/` | Routes, page titles, the URL scenario selection |
 | `src/scenario/` | Types, the runtime validator, the lazy scenario registry, label helpers, comparison maths, UI-written explanations |
 | `src/playback/` | The single playback reducer, the clock, the provider (one animation loop), keyboard shortcuts |
-| `src/components/` | AppHeader (navigation), Pitch (SVG), Timeline, Transport, Inspector, Legend, ScenarioPanel, ThemeToggle, page headings and loading states |
-| `src/pages/` | Explorer, Compare, Methodology, Not found |
+| `src/components/` | AppHeader (navigation), Pitch (SVG), Timeline, Transport, Inspector, Legend, ScenarioPanel (scenario chips), ThemeToggle, Diagrams, CompetitionStrip, Reveal, Icon, page headings and loading states |
+| `src/pages/` | Home, Explorer, Compare, Methodology, Team, Not found |
+| `src/team/members.ts` | The four team members (names and links) |
+| `public/` | Team portraits (`team/`) and the organisers' logos (`organisers/`) |
 | `src/styles/` | `tokens.css` (design tokens, both themes) and `app.css` |
 | `src/test/` | Vitest suites: data, playback, comparison, UI, pages and routing |
 | `scripts/` | The browser smoke test |
@@ -123,8 +135,8 @@ panel on that page reads its frame. Embedding the pitch and timeline elsewhere (
 future Home page) only needs another provider.
 
 **Motion:**
-- Page entrances, the navigation indicator, the mobile menu and theme changes use the token
-  durations (120 ms and 240 ms).
+- Page entrances, the navigation indicator, the mobile menu, disclosures, tabs, theme changes and
+  the once-only section reveals on Home use the token durations (120 ms and 240 ms).
 - The playhead is never animated, so it always shows the exact frame.
 - `prefers-reduced-motion: reduce` removes every transition and animation; user-started
   playback still works.
@@ -143,6 +155,13 @@ future Home page) only needs another provider.
 - **Licence scope:** the Motus-derived values are not covered by this repository's MIT licence.
 - **MAF FC originals:** the possession data colours (H/A/D/X), pitch colours and all
   application code.
+- **Icons:** [`lucide-react`](https://lucide.dev) line icons, ISC licence. Icons are decorative and
+  always sit next to a visible label.
+- **Competition context:** the attribution sentence follows the organisers' official repository.
+  The Metrica Sports, Barça Innovation Hub and Mobile World Capital Barcelona logos in
+  `public/organisers/` were supplied by the project owner for this use and are shown unmodified on a
+  black plate, each linking to the organiser's official site. They belong to their owners, are not
+  covered by this repository's MIT licence, and do not imply endorsement of MAF FC.
 - **Fonts:** Inter and Space Grotesk, from the public
   [`@fontsource-variable`](https://fontsource.org) npm packages, under the SIL Open Font Licence
   1.1. The licence texts ship in those packages.

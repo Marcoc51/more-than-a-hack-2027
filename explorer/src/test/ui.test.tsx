@@ -9,11 +9,13 @@ const frameText = () => screen.getByTestId('readout').textContent ?? '';
 const seekTo = (frame: number) => fireEvent.change(screen.getByRole('slider', { name: 'Frame' }), { target: { value: String(frame) } });
 
 describe('Explorer app', () => {
-  it('shows the MAF FC brand, the synthetic-data indicator and no logo image', async () => {
+  it('shows the MAF FC brand, the synthetic-data indicator and no brand logo image', async () => {
     await renderLoaded();
-    expect(screen.getByText('MAF FC')).toBeInTheDocument();
+    expect(within(screen.getByRole('banner')).getByText('MAF FC')).toBeInTheDocument();
     expect(screen.getByText('Synthetic data')).toBeInTheDocument();
-    expect(document.querySelector('img')).toBeNull();
+    // MAF FC is a text wordmark; the only images are the competition organisers' logos (UI3B.2).
+    const images = [...document.querySelectorAll('img')];
+    expect(images.every((i) => i.classList.contains('organiser-logo') && i.getAttribute('src')?.startsWith('/organisers/'))).toBe(true);
     expect(screen.getByRole('banner').textContent).not.toMatch(/motus/i);
   });
 

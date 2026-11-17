@@ -8,29 +8,36 @@ const link = (name: string) => within(nav()).getByRole('link', { name });
 const frameText = () => screen.getByTestId('readout').textContent ?? '';
 
 describe('routing and navigation', () => {
-  it('redirects / to the Explorer, keeping the scenario selection', async () => {
-    renderApp('/?scenario=s3');
-    await screen.findByTestId('readout');
-    expect(screen.getByRole('heading', { level: 1, name: 'Explorer' })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: /S3/ })).toBeChecked();
+  it('serves the Home page at / (UI3B: Home replaces the UI2 redirect)', async () => {
+    renderApp('/');
+    expect(await screen.findByRole('heading', { level: 1, name: /Possession, frame by frame/ })).toBeInTheDocument();
+    await waitFor(() => expect(document.title).toBe('Home · MAF FC Possession Explorer'));
+    expect(link('Home')).toHaveAttribute('aria-current', 'page');
   });
 
   it.each([
-    ['/explorer', 'Explorer'], ['/compare', 'Compare'], ['/methodology', 'Methodology'],
+    ['/explorer', 'Explorer'], ['/compare', 'Compare'], ['/methodology', 'Methodology'], ['/team', 'Team'],
   ])('%s renders its page, title and active link', async (path, name) => {
     renderApp(path);
     expect(await screen.findByRole('heading', { level: 1, name })).toBeInTheDocument();
     await waitFor(() => expect(document.title).toBe(`${name} · MAF FC Possession Explorer`));
     expect(link(name)).toHaveAttribute('aria-current', 'page');
-    for (const other of ['Explorer', 'Compare', 'Methodology'].filter((n) => n !== name)) {
+    for (const other of ['Home', 'Explorer', 'Compare', 'Methodology', 'Team'].filter((n) => n !== name)) {
       expect(link(other)).not.toHaveAttribute('aria-current');
     }
   });
 
-  it('shows no Home or Team links, and an honest page for unknown paths', async () => {
+  it('lists the five real pages, and shows an honest page for unknown paths', async () => {
     renderApp('/nowhere');
     expect(await screen.findByRole('heading', { level: 1, name: 'Page not found' })).toBeInTheDocument();
-    expect(within(nav()).getAllByRole('link').map((l) => l.textContent)).toEqual(['Explorer', 'Compare', 'Methodology']);
+    const names = within(nav()).getAllByRole('link').map((l) => l.getAttribute('href'));
+    expect(names).toEqual(['/', '/explorer', '/compare', '/methodology', '/team']);
+    // Icons are hidden and descriptions are not part of the name: each link is named by its label alone.
+    for (const name of ['Home', 'Explorer', 'Compare', 'Methodology', 'Team']) {
+      const l = within(nav()).getByRole('link', { name });
+      expect(l).toHaveAccessibleDescription(/\w+/);
+      expect(l.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    }
   });
 
   it('moves focus to the new page heading after navigating', async () => {
@@ -67,7 +74,7 @@ describe('mobile navigation menu', () => {
     await user.click(button);
     expect(screen.getByRole('button', { name: 'Close menu' })).toHaveAttribute('aria-expanded', 'true');
     expect(document.getElementById('main-nav-list')).toHaveAttribute('data-open', 'true');
-    expect(link('Explorer')).toHaveFocus();
+    expect(link('Home')).toHaveFocus();   // the first link (Home since UI3B)
     await user.keyboard('{Escape}');
     expect(screen.getByRole('button', { name: 'Open menu' })).toHaveAttribute('aria-expanded', 'false');
     expect(screen.getByRole('button', { name: 'Open menu' })).toHaveFocus();
@@ -100,7 +107,7 @@ describe('Compare page', () => {
       expect(screen.getByTestId(`agreement-${m}`)).toHaveTextContent(`${percent(a.rate)} (${a.agree}/${a.graded})`);
       expect(screen.getByTestId(`spellf1-${m}`)).toHaveTextContent(S3.models[m].scores.spellF1Mean.toFixed(3));
     }
-    expect(screen.getByText(/not the competition score/)).toBeInTheDocument();
+    expect(within(screen.getByTestId('verdict')).getByText(/not the competition score/)).toBeInTheDocument();
   });
 
   it('lists every disagreement, filters and sorts them', async () => {
@@ -138,8 +145,8 @@ describe('Compare page', () => {
     for (const id of ['reference', 'phase3b', 'smooth50', 'diff-phase3b', 'diff-smooth50']) {
       expect(screen.getByTestId(`track-${id}`)).toBeInTheDocument();
     }
-    expect(screen.getByRole('heading', { name: 'Reading this scenario' })).toBeInTheDocument();
-    const guide = screen.getByRole('region', { name: 'Reading this scenario' });
+    act(() => screen.getByRole('tab', { name: /Reading this scenario/ }).click());
+    const guide = screen.getByRole('tabpanel', { name: /Reading this scenario/ });
     expect(within(guide).getByText('Scripted reference', { exact: false })).toBeInTheDocument();
     expect(within(guide).getByText('UI description')).toBeInTheDocument();
     expect(S1.models.phase3b.scores.spellF1Mean).toBe(1);
@@ -152,7 +159,7 @@ describe('Methodology page', () => {
     await screen.findByRole('heading', { level: 1, name: 'Methodology' });
     const toc = screen.getByRole('navigation', { name: 'On this page' });
     const links = within(toc).getAllByRole('link');
-    expect(links).toHaveLength(12);
+    expect(links).toHaveLength(11);
     for (const a of links) {
       const id = a.getAttribute('href')!.slice(1);
       expect(document.getElementById(id)).not.toBeNull();

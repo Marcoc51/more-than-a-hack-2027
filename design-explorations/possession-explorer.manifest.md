@@ -26,7 +26,7 @@ Classes: ✅ Real (populated from the fixture/engine) · ⚠️ Sometimes (partl
 | Scenarios S2–S4 | `scenarios[]` | ❌ Aspirational | 0/3 exist; drawn as "planned" |
 | Parameters panel | `params` | ✅ Real | values from `DEFAULTS` / `GAME_DEFAULTS` |
 | Evidence stats (B) | static copy | ✅ Real | 143 passed + 2 skipped (pytest at ff686e3, no official clone); 9 parameters, 8 used |
-| Team members (B, C) | `team[]` | ❌ Aspirational | 0/5 approved entries; placeholders only |
+| Team members (B, C) | `team[]` | ✅ Real | 4/4 members (Marc, Fahmy, Faris, Eslam), approved by the owner in UI3B.1 |
 | Confidence / accuracy | — | not shown | none exists; must never be invented |
 
 ## Gaps the implement phase must decide

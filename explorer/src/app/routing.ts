@@ -6,10 +6,14 @@ export const APP_NAME = 'MAF FC Possession Explorer';
 
 /** The routes with real pages, in navigation order. */
 export const ROUTES = [
-  { path: '/explorer', label: 'Explorer' },
-  { path: '/compare', label: 'Compare' },
-  { path: '/methodology', label: 'Methodology' },
+  { path: '/', label: 'Home', description: 'The project in one page' },
+  { path: '/explorer', label: 'Explorer', description: 'Play a scenario frame by frame' },
+  { path: '/compare', label: 'Compare', description: 'Phase 3B and smooth50 against the script' },
+  { path: '/methodology', label: 'Methodology', description: 'How the engine decides' },
+  { path: '/team', label: 'Team', description: 'The people behind MAF FC' },
 ] as const;
+
+export type RoutePath = (typeof ROUTES)[number]['path'];
 
 export function useDocumentTitle(page: string): void {
   useEffect(() => {

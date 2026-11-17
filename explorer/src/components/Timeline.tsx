@@ -1,4 +1,4 @@
-import { useMemo, useRef, type KeyboardEvent, type MouseEvent } from 'react';
+import { Fragment, useMemo, useRef, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
 import { LABELS, frameTime, labelAt, runs, type Run } from '../scenario/labels';
 import { scoredMask } from '../scenario/compare';
 import type { Scenario } from '../scenario/types';
@@ -6,7 +6,7 @@ import { usePlayback, usePlaybackDispatch } from '../playback/PlaybackProvider';
 import { clampFrame } from '../playback/reducer';
 
 type TrackKind = 'label' | 'evidence' | 'ball' | 'diff';
-export type TimelineVariant = 'explorer' | 'compare';
+export type TimelineVariant = 'explorer' | 'compare' | 'mini';
 
 interface Track {
   id: string;
@@ -29,30 +29,38 @@ function diffValues(scenario: Scenario, labels: string): string {
   return mask.map((g, f) => (!g ? 'u' : labels[f] === ref[f] ? '=' : '!')).join('');
 }
 
-function tracksFor(scenario: Scenario, variant: TimelineVariant): Track[] {
+interface TrackGroup {
+  title: string | null;
+  tracks: Track[];
+}
+
+/** Tracks in named groups: possession first, then evidence (Explorer) or differences (Compare).
+ *  The mini variant (Home) shows only the two model outputs. */
+function groupsFor(scenario: Scenario, variant: TimelineVariant): TrackGroup[] {
   const { phase3b, smooth50 } = scenario.models;
-  const tracks: Track[] = [];
-  if (scenario.reference) {
-    tracks.push({ id: 'reference', name: 'Reference', origin: 'scenario script', kind: 'label', values: scenario.reference.labels });
-  }
-  tracks.push(
-    { id: 'phase3b', name: phase3b.name, origin: 'model output', kind: 'label', values: phase3b.labels },
-    { id: 'smooth50', name: smooth50.name, origin: 'model output', kind: 'label', values: smooth50.labels },
-  );
+  const p3: Track = { id: 'phase3b', name: phase3b.name, origin: 'model output', kind: 'label', values: phase3b.labels };
+  const sm: Track = { id: 'smooth50', name: smooth50.name, origin: 'model output', kind: 'label', values: smooth50.labels };
+  if (variant === 'mini') return [{ title: null, tracks: [p3, sm] }];
+  const possession: Track[] = scenario.reference
+    ? [{ id: 'reference', name: 'Reference', origin: 'scenario script', kind: 'label', values: scenario.reference.labels }, p3, sm]
+    : [p3, sm];
   if (variant === 'compare') {
+    const groups: TrackGroup[] = [{ title: 'Possession', tracks: possession }];
     if (scenario.reference) {
-      tracks.push(
+      groups.push({ title: 'Differences from the reference', tracks: [
         { id: 'diff-phase3b', name: 'Phase 3B vs reference', origin: 'computed here', kind: 'diff', values: diffValues(scenario, phase3b.labels) },
         { id: 'diff-smooth50', name: 'smooth50 vs reference', origin: 'computed here', kind: 'diff', values: diffValues(scenario, smooth50.labels) },
-      );
+      ] });
     }
-    return tracks;
+    return groups;
   }
-  tracks.push(
-    { id: 'evidence', name: 'Control evidence', origin: 'Phase 3B output', kind: 'evidence', values: phase3b.evidence },
-    { id: 'ball', name: 'Ball tracking', origin: 'synthetic observation', kind: 'ball', values: scenario.frames.map((f) => (f.ball ? 't' : 'n')).join('') },
-  );
-  return tracks;
+  return [
+    { title: 'Possession', tracks: possession },
+    { title: 'Evidence and annotations', tracks: [
+      { id: 'evidence', name: 'Control evidence', origin: 'Phase 3B output', kind: 'evidence', values: phase3b.evidence },
+      { id: 'ball', name: 'Ball tracking', origin: 'synthetic observation', kind: 'ball', values: scenario.frames.map((f) => (f.ball ? 't' : 'n')).join('') },
+    ] },
+  ];
 }
 
 function segmentClass(kind: TrackKind, value: string): string {
@@ -83,10 +91,18 @@ function Segments({ track, n }: { track: Track; n: number }) {
   );
 }
 
-export function Timeline({ scenario, variant = 'explorer' }: { scenario: Scenario; variant?: TimelineVariant }) {
+interface TimelineProps {
+  scenario: Scenario;
+  variant?: TimelineVariant;
+  /** Rendered under the tracks, inside the same section (legend, shortcuts). */
+  children?: ReactNode;
+}
+
+export function Timeline({ scenario, variant = 'explorer', children }: TimelineProps) {
   const { frame, frameCount } = usePlayback();
   const dispatch = usePlaybackDispatch();
-  const shown = useMemo(() => tracksFor(scenario, variant), [scenario, variant]);
+  const groups = useMemo(() => groupsFor(scenario, variant), [scenario, variant]);
+  const showEvents = variant !== 'mini';
   const n = frameCount;
 
   const sliderRef = useRef<HTMLDivElement>(null);
@@ -120,25 +136,37 @@ export function Timeline({ scenario, variant = 'explorer' }: { scenario: Scenari
     `${scenario.models.phase3b.name}: ${LABELS[p3].name}. ${scenario.models.smooth50.name}: ${LABELS[base].name}.`;
 
   return (
-    <section className="timeline" aria-label="Possession timelines">
+    <section className={`timeline timeline-${variant}`} aria-label="Possession timelines">
       <div className="tl-grid">
         <div className="tl-names">
-          {shown.map((t) => (
-            <div key={t.id} className="tl-name">
-              <span className="tl-name-main">{t.name}</span>
-              <span className="tl-name-origin">{t.origin}</span>
-            </div>
+          {groups.map((g) => (
+            <Fragment key={g.title ?? 'tracks'}>
+              {g.title && <div className="tl-group-head">{g.title}</div>}
+              {g.tracks.map((t) => (
+                <div key={t.id} className="tl-name">
+                  <span className="tl-name-main">{t.name}</span>
+                  {variant !== 'mini' && <span className="tl-name-origin">{t.origin}</span>}
+                </div>
+              ))}
+            </Fragment>
           ))}
-          <div className="tl-name tl-name-events"><span className="tl-name-main">Events</span></div>
+          {showEvents && <div className="tl-name tl-name-events"><span className="tl-name-main">Events</span></div>}
         </div>
         {/* Pointer seeking: a click or tap anywhere on the bars seeks to that exact frame. */}
         <div className="tl-bars" onClick={seek} data-testid="timeline-bars">
-          {shown.map((t) => <Segments key={t.id} track={t} n={n} />)}
-          <div className="tl-events" aria-hidden="true">
-            {scenario.events.map((ev) => (
-              <span key={`${ev.type}-${ev.frame}`} className="tl-event" style={{ left: `${((ev.frame + 0.5) / n) * 100}%` }} title={`${ev.type} · frame ${ev.frame}`} />
-            ))}
-          </div>
+          {groups.map((g) => (
+            <Fragment key={g.title ?? 'tracks'}>
+              {g.title && <div className="tl-group-spacer" aria-hidden="true" />}
+              {g.tracks.map((t) => <Segments key={t.id} track={t} n={n} />)}
+            </Fragment>
+          ))}
+          {showEvents && (
+            <div className="tl-events" aria-hidden="true">
+              {scenario.events.map((ev) => (
+                <span key={`${ev.type}-${ev.frame}`} className="tl-event" style={{ left: `${((ev.frame + 0.5) / n) * 100}%` }} title={`${ev.type} · frame ${ev.frame}`} />
+              ))}
+            </div>
+          )}
           <div
             className="tl-playhead"
             style={{ left: `${(frame / n) * 100}%`, width: `${100 / n}%` }}
@@ -162,6 +190,7 @@ export function Timeline({ scenario, variant = 'explorer' }: { scenario: Scenari
           />
         </div>
       </div>
+      {children}
     </section>
   );
 }

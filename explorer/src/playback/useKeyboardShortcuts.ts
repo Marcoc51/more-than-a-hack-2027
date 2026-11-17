@@ -9,9 +9,11 @@ export function ownsKey(target: EventTarget | null, key: string): boolean {
   if (tag === 'TEXTAREA' || tag === 'SELECT') return true;
   if (tag === 'INPUT') {
     const type = (target as HTMLInputElement).type;
-    // Text-like inputs own everything; a range input owns the arrows; checkboxes etc. own Space.
+    // Text-like inputs own everything; a range input owns the arrows; a radio owns the arrows
+    // (they move through its group) and Space; checkboxes and buttons own Space.
     if (type === 'range') return key.startsWith('Arrow');
-    if (['checkbox', 'radio', 'button', 'submit', 'reset'].includes(type)) return key === ' ';
+    if (type === 'radio') return key.startsWith('Arrow') || key === ' ';
+    if (['checkbox', 'button', 'submit', 'reset'].includes(type)) return key === ' ';
     return true;
   }
   const role = target.getAttribute('role');

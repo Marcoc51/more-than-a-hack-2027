@@ -135,3 +135,35 @@ export function longestRun(s: string, c: string, start = 0, end = s.length): num
 export function percent(rate: number | null): string {
   return rate === null ? 'n/a' : `${(rate * 100).toFixed(1)}%`;
 }
+
+export interface Summary {
+  /** Frame agreement of both models with the reference, in one sentence. */
+  agreement: string;
+  /** Which model scores higher on the official synthetic spellF1 (or that they tie). */
+  spells: string;
+  /** Phase 3B's longest difference from the reference, or that there is none. */
+  difference: string;
+}
+
+/** The Compare page's headline, generated from the exported labels and official scores only. */
+export function summarize(scenario: Scenario): Summary {
+  const mask = scoredMask(scenario);
+  const ref = scenario.reference?.labels ?? '';
+  const { phase3b, smooth50 } = scenario.models;
+  const a3 = agreement(ref, phase3b.labels, mask);
+  const as = agreement(ref, smooth50.labels, mask);
+  const s3 = phase3b.scores.spellF1Mean;
+  const ss = smooth50.scores.spellF1Mean;
+  const longest = disagreements(scenario)
+    .filter((d) => d.models.includes('phase3b'))
+    .sort((a, b) => (b.end - b.start) - (a.end - a.start) || a.start - b.start)[0];
+  return {
+    agreement: `Phase 3B matches the script on ${a3.agree} of ${a3.graded} graded frames (${percent(a3.rate)}); smooth50 on ${as.agree} (${percent(as.rate)}).`,
+    spells: s3 === ss
+      ? `Both score ${s3.toFixed(3)} on the official synthetic spellF1.`
+      : `On the official synthetic spellF1, ${s3 > ss ? 'Phase 3B' : 'smooth50'} scores higher (${Math.max(s3, ss).toFixed(3)} vs ${Math.min(s3, ss).toFixed(3)}).`,
+    difference: longest
+      ? `Phase 3B's longest difference is frames ${longest.start}–${longest.end - 1}: reference ${longest.reference}, Phase 3B ${longest.phase3b}.`
+      : 'Phase 3B agrees with the script on every graded frame.',
+  };
+}
