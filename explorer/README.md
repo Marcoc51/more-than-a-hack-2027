@@ -275,6 +275,30 @@ The build is a static single-page app, which client-side routing needs to serve 
 - To deploy under a sub-path, build with `npm run build -- --base=/sub-path/`; the router uses
   the same base.
 
+### GitHub Pages deployment
+
+The public demo is published by [`.github/workflows/deploy-explorer.yml`](../.github/workflows/deploy-explorer.yml)
+to the expected URL **https://marcoc51.github.io/more-than-a-hack-2027/**.
+
+- **When it runs:** on every push to `main` that changes `explorer/` or the workflow. To run it
+  by hand, open **Actions → Deploy public Explorer → Run workflow**. Progress and the live URL
+  appear in the Actions run and under the repository's **github-pages** environment.
+- **What it does:** on GitHub's Ubuntu runners with Node 24, it runs `npm ci`, `npm test`,
+  `npm run privacy:test` and the public build. Any failure stops the deployment.
+
+  ```bash
+  npm run build -- --base=/more-than-a-hack-2027/
+  ```
+
+  It then checks the base path and the `404.html` deep-link fallback, and uploads **only
+  `explorer/dist`** with GitHub's official Pages actions.
+- **Why no match data can be published:** the workflow never runs `dev:local`. Local-mode builds
+  are refused, and the build's privacy check fails on any file outside the public allowlist
+  (four synthetic scenarios, approved images, fonts and notices). `.local-explorer/` exports and
+  other match data are Git-ignored, so they do not exist on the runner.
+- **Permissions:** the build job can only read the repository; only the deploy job can write to
+  Pages. No secrets or extra branches are used.
+
 ### Browser smoke test
 
 `npm run smoke` runs `scripts/browser-smoke.mjs`:

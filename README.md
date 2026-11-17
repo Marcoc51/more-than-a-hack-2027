@@ -75,14 +75,17 @@ competition CSV.
 
 | | Public demo | Local Explorer |
 |---|---|---|
-| Runs | Any static host (`npm run build`) | Your computer only (`npm run dev:local`), never deployed |
+| Runs | GitHub Pages or any static host (`npm run build`) | Your computer only (`npm run dev:local`), never deployed |
 | Data | Four synthetic scenarios written by the team | Your authorized actual-match exports, kept in Git-ignored `.local-explorer/` |
 | Predictions | The unchanged Python engines, run on the synthetic scenarios | Your existing engine CSV and, optionally, smooth50 |
 | Compare page | Both models against each scenario's **scripted** reference labels | Engine **vs smooth50**: where the predictions agree and differ |
 | What scores mean | Illustrative behaviour on invented situations | No accuracy at all: there are no reference labels |
 
 - **Public demo:** contains no competition data, video, ground truth or real predictions. Its
-  scenario metrics demonstrate behaviour; they are not competition accuracy.
+  scenario metrics demonstrate behaviour; they are not competition accuracy. It is deployed
+  to GitHub Pages by a GitHub Actions workflow at the expected URL
+  **https://marcoc51.github.io/more-than-a-hack-2027/** (see
+  [GitHub Pages deployment](explorer/README.md#github-pages-deployment)).
 - **Local Explorer:** opens your registered export by default and lets you switch between
   five-minute match windows. Real frame numbers are shown throughout. Its data loader exists
   only in the local development server, refuses non-local requests, and is absent from every

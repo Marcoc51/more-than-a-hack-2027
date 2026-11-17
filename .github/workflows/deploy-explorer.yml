@@ -1,0 +1,78 @@
+# Publishes the PUBLIC React Explorer (four synthetic scenarios) to GitHub Pages.
+# Only explorer/dist from the public production build is uploaded. The local-only Explorer
+# (`npm run dev:local`), its export loader and any match data are never built or deployed:
+# Vite refuses local-mode builds, and the postbuild privacy check fails on any unapproved file.
+name: Deploy public Explorer
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "explorer/**"
+      - ".github/workflows/deploy-explorer.yml"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  BASE_PATH: /more-than-a-hack-2027/
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: explorer
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: explorer/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Public/private isolation tests
+        run: npm run privacy:test
+
+      - name: Public production build for the Pages sub-path
+        # postbuild re-verifies licence notices and the public file allowlist (fails on any extra file).
+        run: npm run build -- --base="$BASE_PATH"
+
+      - name: Check the Pages base path and deep-link fallback
+        run: |
+          grep -q "src=\"${BASE_PATH}assets/" dist/index.html
+          cmp dist/index.html dist/404.html
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: explorer/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
