@@ -15,6 +15,19 @@ produce identical output. An optional **React Explorer** shows how possession de
 | `D` | Dead ball (play stopped) |
 | `X` | No answer (outside the halves, or no possession established yet) |
 
+## Live React Explorer
+
+**[Open the Live Explorer](https://marcoc51.github.io/more-than-a-hack-2027/)**: step through four
+synthetic football scenarios frame by frame. It shows the tracking on the pitch, the possession
+timelines and why the engine decides each label, and compares the engine with the official
+smooth50 baseline.
+
+[![Public React Explorer preview](docs/assets/explorer-preview.webp)](https://marcoc51.github.io/more-than-a-hack-2027/)
+
+The public Explorer uses **synthetic demonstration data only**. It does not show the competition
+match; restricted competition data is excluded from this repository and the website. More in
+[React Explorer](#react-explorer).
+
 ## Architecture
 
 ![Football Possession Intelligence Architecture](docs/assets/possession-architecture.svg)
