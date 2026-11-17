@@ -1,0 +1,158 @@
+/* MAF FC design tokens.
+ *
+ * PROVENANCE. This file mixes two kinds of value:
+ *
+ * 1. MOTUS-DERIVED (Motus visual identity, Night and Floodlight themes). Re-stated by hand from
+ *    the Motus Design System tokens (youth-of-future/motus-design-system, commit 1fd5127), under
+ *    MAF FC names. The owner confirms this project's public use; no independent grant document
+ *    is stored here. No Motus source file, component, logo or icon is copied or
+ *    bundled. These values are not covered by this repository's MIT licence.
+ *    They are:
+ *      - palette: --maf-volt, -volt-400, -volt-600, -night-pitch, -ink, -graphite, -steel, -slate,
+ *        -fog, -mist, -floodlight, -white, -watch;
+ *      - semantic colours in both theme blocks: -bg, -bg-sunken, -surface, -surface-raised,
+ *        -border, -border-strong, -text, -text-muted, -accent*, -on-accent, -accent-ink,
+ *        -accent-soft, -focus, -fill-neutral, -shadow-raised, -watch-ink, -watch-soft;
+ *      - the font pairing (display Space Grotesk, body Inter); the fonts themselves are SIL OFL
+ *        1.1 and come from the public @fontsource-variable packages, not from Motus;
+ *      - the spacing scale, radii, control and app-bar sizes, and the motion timings and easing;
+ *      - control styling conventions in app.css (1.5px borders, 8px radius, 600 14/20 labels,
+ *        uppercase 12px headings, 2px focus ring with 2px offset).
+ *    The Volt-on-Night pairing is the Motus brand signature.
+ *
+ * 2. MAF FC ORIGINAL (not Motus): --maf-font-mono; --maf-content-max; --maf-pitch-surface and
+ *    --maf-pitch-line; the surface tokens --maf-hairline* and --maf-shadow-card/-primary; the
+ *    possession data colours --maf-poss-* (except --maf-poss-home in the
+ *    dark theme, which reuses Volt), --maf-on-poss*, --maf-ev-none, --maf-ball*. Motus defines no
+ *    categorical data palette. Home and away differ in hue along the blue-yellow axis, which
+ *    stays distinct under common colour-vision deficiencies, and every label also shows its
+ *    letter.
+ *
+ * MAF FC is the product brand. MAF FC is not an official Motus product.
+ */
+
+:root {
+  --maf-font-display: "Space Grotesk Variable", "Space Grotesk", system-ui, sans-serif;
+  --maf-font-body: "Inter Variable", Inter, system-ui, sans-serif;
+  --maf-font-mono: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
+  --maf-volt: #C3F400;
+  --maf-volt-400: #D5F74C;
+  --maf-volt-600: #84A609;
+  --maf-night-pitch: #0F1419;
+  --maf-ink: #080B0E;
+  --maf-graphite: #1A2129;
+  --maf-steel: #2B3540;
+  --maf-slate: #5B6875;
+  --maf-fog: #9AA5B1;
+  --maf-mist: #E4E9ED;
+  --maf-floodlight: #F5F7F2;
+  --maf-white: #FFFFFF;
+  --maf-watch: #FFB020;
+
+  --maf-space-1: 4px;
+  --maf-space-2: 8px;
+  --maf-space-3: 12px;
+  --maf-space-4: 16px;
+  --maf-space-5: 20px;
+  --maf-space-6: 24px;
+  --maf-space-8: 32px;
+  --maf-space-10: 40px;
+
+  --maf-radius-sm: 6px;
+  --maf-radius-control: 8px;
+  --maf-radius-md: 14px;
+  --maf-radius-lg: 22px;
+  --maf-radius-pill: 999px;
+
+  --maf-control-sm: 32px;
+  --maf-control-md: 40px;
+  --maf-control-lg: 48px;
+  --maf-app-bar: 56px;
+  --maf-content-max: 1440px;
+
+  --maf-motion-fast: 120ms;
+  --maf-motion-base: 240ms;
+  --maf-motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Night (dark): default */
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --maf-bg: #0F1419;
+  --maf-bg-sunken: #080B0E;
+  --maf-surface: #1A2129;
+  --maf-surface-raised: #2B3540;
+  --maf-border: #2B3540;
+  --maf-border-strong: #7A8794;
+  --maf-text: #FFFFFF;
+  --maf-text-muted: #9AA5B1;
+  --maf-accent: #C3F400;
+  --maf-accent-hover: #D5F74C;
+  --maf-accent-pressed: #84A609;
+  --maf-on-accent: #0F1419;
+  --maf-accent-ink: #C3F400;
+  --maf-accent-soft: rgba(195, 244, 0, 0.14);
+  --maf-focus: #C3F400;
+  --maf-fill-neutral: #2B3540;
+  --maf-shadow-raised: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --maf-watch-ink: #FFB020;
+  --maf-watch-soft: rgba(255, 176, 32, 0.16);
+
+  --maf-pitch-surface: #141A20;
+  --maf-pitch-line: #5B6875;
+  --maf-poss-home: #C3F400;
+  --maf-poss-away: #5AB0FF;
+  --maf-poss-dead: #5B6875;
+  --maf-poss-none: #1A2129;
+  --maf-on-poss: #0F1419;
+  --maf-on-poss-dead: #FFFFFF;
+  --maf-ev-none: #2B3540;
+  --maf-ball: #FFFFFF;
+  --maf-ball-stroke: #0F1419;
+  --maf-hairline: rgba(255, 255, 255, 0.07);
+  --maf-hairline-strong: rgba(255, 255, 255, 0.16);
+  --maf-shadow-card: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 24px rgba(0, 0, 0, 0.28);
+  --maf-shadow-primary: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 16px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* Floodlight (light) */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --maf-bg: #F5F7F2;
+  --maf-bg-sunken: #E4E9ED;
+  --maf-surface: #FFFFFF;
+  --maf-surface-raised: #FFFFFF;
+  --maf-border: #E4E9ED;
+  --maf-border-strong: #74808C;
+  --maf-text: #0F1419;
+  --maf-text-muted: #5B6875;
+  --maf-accent: #C3F400;
+  --maf-accent-hover: #D5F74C;
+  --maf-accent-pressed: #84A609;
+  --maf-on-accent: #0F1419;
+  --maf-accent-ink: #0F1419;
+  --maf-accent-soft: #EDFCB2;
+  --maf-focus: #0F1419;
+  --maf-fill-neutral: #E4E9ED;
+  --maf-shadow-raised: 0 2px 8px rgba(15, 20, 25, 0.08);
+  --maf-watch-ink: #8A5700;
+  --maf-watch-soft: rgba(255, 176, 32, 0.20);
+
+  --maf-pitch-surface: #E9EEE6;
+  --maf-pitch-line: #74808C;
+  --maf-poss-home: #9BC400;
+  --maf-poss-away: #2F8BE0;
+  --maf-poss-dead: #5B6875;
+  --maf-poss-none: #FFFFFF;
+  --maf-on-poss: #0F1419;
+  --maf-on-poss-dead: #FFFFFF;
+  --maf-ev-none: #E4E9ED;
+  --maf-ball: #FFFFFF;
+  --maf-ball-stroke: #0F1419;
+  --maf-hairline: rgba(15, 20, 25, 0.08);
+  --maf-hairline-strong: rgba(15, 20, 25, 0.2);
+  --maf-shadow-card: 0 1px 2px rgba(15, 20, 25, 0.05), 0 8px 24px rgba(15, 20, 25, 0.06);
+  --maf-shadow-primary: 0 2px 4px rgba(15, 20, 25, 0.06), 0 16px 40px rgba(15, 20, 25, 0.1);
+}
