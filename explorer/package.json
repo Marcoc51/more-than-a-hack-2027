@@ -6,7 +6,9 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build && node scripts/license-notices.mjs",
+    "build": "tsc --noEmit && vite build",
+    "postbuild": "node scripts/license-notices.mjs",
+    "licenses": "npm run licenses:check",
     "licenses:check": "node scripts/license-notices.mjs --check",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
