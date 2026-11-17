@@ -1,0 +1,495 @@
+<!doctype html>
+<!--
+  MAF FC Possession Explorer: three directions (explore-design, UI0).
+  Source spec: UI0 brief + README.md, docs/TECHNICAL_DOCUMENT.md, src/possession.py at ff686e3.
+  Data: synthetic end-to-end fixture from tests/test_game_state.py, run through both engines. 2026-11-16.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Possession Explorer Directions</title>
+<style>
+:root{--maf-paper:#F5F3EE;--maf-surface:#FFFFFF;--maf-ink:#16191D;--maf-muted:#5D6470;--maf-rule:#DAD6CD;--maf-green:#0F6B4A;--maf-gold:#B5841A;
+--maf-pitch:#2F7A52;--maf-line:#E9F3EC;--st-H:#2563C9;--st-A:#C2511B;--st-D:#5B6472;--st-X:#ECE9E2;
+--f-head:"Space Grotesk","Segoe UI",system-ui,-apple-system,sans-serif;--f-body:"Inter","Segoe UI",system-ui,-apple-system,sans-serif;--f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--maf-paper);color:var(--maf-ink);font:15px/1.55 var(--f-body)}
+:focus-visible{outline:2px solid var(--maf-green);outline-offset:2px}
+button{font:inherit;color:inherit}
+.page{max-width:1240px;margin:0 auto;padding:40px 16px 80px}
+.ph-mark{font:700 13px/1 var(--f-head);letter-spacing:.14em;color:var(--maf-green);text-transform:uppercase}
+.ph h1{font:700 clamp(28px,4vw,40px)/1.1 var(--f-head);margin:10px 0 8px}
+.ph p{margin:0 0 6px;color:var(--maf-muted);max-width:820px}
+.meta{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:16px;font:12px/1.4 var(--f-mono);color:var(--maf-muted)}
+.note{margin-top:18px;padding:12px 14px;border-left:3px solid var(--maf-gold);background:#FBF7EC;max-width:880px;font-size:14px}
+.variant{margin-top:56px}
+.v-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.v-letter{font:700 14px/1 var(--f-mono);background:var(--maf-ink);color:var(--maf-paper);border-radius:6px;padding:6px 9px}
+.v-head h2{font:700 24px/1.2 var(--f-head);margin:0}
+.tradeoff{margin:8px 0 6px;color:var(--maf-muted)}
+.ia{font:12px/1.5 var(--f-mono);color:var(--maf-muted);margin:0 0 14px}
+.ia b{color:var(--maf-ink);font-weight:600}
+.preview{background:var(--maf-surface);border:1px solid var(--maf-rule);border-radius:16px;overflow:hidden;container-type:inline-size}
+.analysis{margin-top:12px;max-width:880px}
+.decision{margin-top:64px;border-top:2px solid var(--maf-ink);padding-top:20px}
+.decision h2,.compare h2{font:700 22px/1.2 var(--f-head);margin:0 0 12px}
+.decision ul{margin:0;padding-left:20px}
+.compare{margin-top:56px}
+.compare-wrap{overflow-x:auto;border:1px solid var(--maf-rule);border-radius:10px;background:var(--maf-surface)}
+.compare table{border-collapse:collapse;width:100%;min-width:760px;font-size:14px}
+.compare th,.compare td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--maf-rule)}
+.compare thead th{font:600 13px/1.3 var(--f-head);background:#F0EDE6}
+.compare tbody th{font-weight:600;width:150px}
+
+.sh-pitch{display:block;width:100%;height:auto;background:var(--maf-pitch);border-radius:10px}
+.sh-pitch .ln{fill:none;stroke:var(--maf-line);stroke-width:.35}
+.sh-pitch .pl{stroke:#fff;stroke-width:.35}
+.sh-pitch .pl.h{fill:var(--st-H)}
+.sh-pitch .pl.a{fill:var(--st-A)}
+.sh-pitch .ball{fill:#fff;stroke:var(--maf-ink);stroke-width:.3}
+.sh-pitch .ghost{fill:none;stroke:#fff;stroke-width:.3;stroke-dasharray:.8 .6;opacity:.85}
+.sh-pitch .gtxt{fill:#fff;font:2.2px var(--f-mono)}
+.sh-strip{position:relative;display:flex;height:22px;border-radius:5px;overflow:hidden;background:var(--st-X)}
+.sh-strip.thin{height:12px}
+.sh-seg{height:100%;display:flex;align-items:center;justify-content:center;font:600 10px/1 var(--f-mono);color:#fff;min-width:0;overflow:hidden}
+.sh-seg.s-H{background:var(--st-H)}
+.sh-seg.s-A{background:var(--st-A)}
+.sh-seg.s-D{background:var(--st-D);background-image:radial-gradient(rgba(255,255,255,.28) 1px,transparent 1.2px);background-size:5px 5px}
+.sh-seg.s-X{background:var(--st-X);color:var(--maf-muted);background-image:repeating-linear-gradient(135deg,transparent 0 4px,rgba(22,25,29,.08) 4px 5px)}
+.sh-seg.s-ev{background:#C9D9CF}
+.sh-seg.s-gap{background:#fff;background-image:repeating-linear-gradient(90deg,var(--maf-rule) 0 2px,transparent 2px 4px)}
+.sh-head{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--maf-ink);pointer-events:none}
+.sh-head::after{content:"";position:absolute;top:-4px;left:-4px;border:5px solid transparent;border-top-color:var(--maf-ink)}
+.sh-chip{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;padding:0 6px;border-radius:6px;font:700 13px/1 var(--f-mono);color:#fff}
+.sh-chip.s-H{background:var(--st-H)}.sh-chip.s-A{background:var(--st-A)}.sh-chip.s-D{background:var(--st-D)}.sh-chip.s-X{background:var(--st-X);color:var(--maf-ink);border:1px solid var(--maf-rule)}
+.sh-btn{border:1px solid var(--maf-rule);background:var(--maf-surface);border-radius:8px;min-width:36px;height:36px;padding:0 10px;cursor:pointer}
+.sh-btn:hover{border-color:var(--maf-muted)}
+.sh-btn.primary{background:var(--maf-ink);color:#fff;border-color:var(--maf-ink)}
+.sh-btn[aria-pressed="true"]{background:var(--maf-green);color:#fff;border-color:var(--maf-green)}
+.sh-range{width:100%;accent-color:var(--maf-green)}
+.sh-legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--maf-muted)}
+.sh-legend span{display:inline-flex;align-items:center;gap:6px}
+.sh-legend i{display:inline-block;width:14px;height:14px;border-radius:3px}
+.sh-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+.va{display:grid;grid-template-columns:200px minmax(0,1fr) 260px;grid-template-rows:auto auto;background:#FAF9F6;font-size:13px}
+.va-rail{grid-row:1/3;border-right:1px solid var(--maf-rule);padding:14px 12px;background:var(--maf-surface)}
+.va-rail h4{font:600 11px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--maf-muted);margin:4px 0 8px}
+.va-brand{font:700 15px/1.1 var(--f-head);margin-bottom:14px}
+.va-brand small{display:block;font:500 11px/1.3 var(--f-body);color:var(--maf-muted)}
+.va-scn{display:block;width:100%;text-align:left;border:1px solid transparent;background:none;border-radius:8px;padding:7px 8px;margin-bottom:4px;cursor:pointer;font-size:12.5px;line-height:1.35}
+.va-scn.on{border-color:var(--maf-green);background:#EEF5F1}
+.va-scn.off{color:var(--maf-muted)}
+.va-scn em{display:block;font-style:normal;font:11px var(--f-mono);color:var(--maf-muted)}
+.va-chk{display:flex;gap:8px;align-items:center;margin:6px 0;font-size:12.5px}
+.va-main{padding:12px 14px 6px;min-width:0}
+.va-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font:12px var(--f-mono);color:var(--maf-muted)}
+.va-insp{padding:12px 14px;border-left:1px solid var(--maf-rule);background:var(--maf-surface);min-width:0}
+.va-insp h4{font:600 11px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--maf-muted);margin:14px 0 8px}
+.va-insp h4:first-child{margin-top:2px}
+.va-now{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center}
+.va-why{margin:0;padding:8px 10px;background:#F3F1EC;border-radius:8px;font-size:12.5px}
+.va-params{margin:0;display:grid;grid-template-columns:1fr auto;gap:3px 10px;font:12px var(--f-mono)}
+.va-params dd{margin:0;text-align:right}
+.va-dock{grid-column:2/4;border-top:1px solid var(--maf-rule);padding:10px 14px 14px;background:var(--maf-surface);min-width:0}
+.va-tx{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.va-tx .grow{flex:1;min-width:140px}
+.va-rows{display:grid;grid-template-columns:110px minmax(0,1fr);gap:6px 10px;align-items:center;font:12px var(--f-mono)}
+.va-ev{position:relative;height:16px;font:10px var(--f-mono);color:var(--maf-muted)}
+.va-ev span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+.va-ev span::before{content:"▾ "}
+@container (max-width:900px){.va{grid-template-columns:1fr}.va-rail,.va-insp,.va-dock{grid-row:auto;grid-column:auto;border:0;border-top:1px solid var(--maf-rule)}.va-rail{display:flex;flex-wrap:wrap;gap:6px}.va-rail h4,.va-chk{display:none}.va-scn{width:auto}.va-rows{grid-template-columns:80px minmax(0,1fr)}}
+
+.vb{font-size:14px}
+.vb-nav{display:flex;justify-content:space-between;align-items:center;padding:14px 28px;border-bottom:1px solid var(--maf-rule)}
+.vb-mark{font:700 18px/1 var(--f-head);letter-spacing:.04em}
+.vb-nav nav{display:flex;gap:18px;font-size:13px;color:var(--maf-muted)}
+.vb-hero{padding:56px 28px 44px;background:linear-gradient(180deg,#EEF5F1,#fff);text-align:center}
+.vb-eyebrow{font:600 12px/1 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--maf-green)}
+.vb-hero h3{font:700 clamp(30px,6cqi,52px)/1.05 var(--f-head);margin:14px auto 14px;max-width:760px}
+.vb-hero p{max-width:620px;margin:0 auto 22px;color:var(--maf-muted);font-size:16px}
+.vb-cta{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.vb-cta a{display:inline-block;padding:11px 18px;border-radius:999px;border:1px solid var(--maf-ink);text-decoration:none;color:var(--maf-ink);font-weight:600}
+.vb-cta a.pri{background:var(--maf-ink);color:#fff}
+.vb-sec{padding:40px 28px;border-top:1px solid var(--maf-rule)}
+.vb-sec h4{font:700 24px/1.2 var(--f-head);margin:0 0 6px}
+.vb-sec>p{margin:0 0 20px;color:var(--maf-muted);max-width:680px}
+.vb-labels{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.vb-label{border:1px solid var(--maf-rule);border-radius:12px;padding:14px}
+.vb-label b{display:block;margin:10px 0 2px;font-family:var(--f-head)}
+.vb-label span{font-size:13px;color:var(--maf-muted)}
+.vb-feature{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:24px;align-items:center}
+.vb-feature .ctl{display:flex;gap:8px;align-items:center;margin-top:10px}
+.vb-steps{counter-reset:s;display:grid;grid-template-columns:repeat(5,1fr);gap:12px;list-style:none;padding:0;margin:0}
+.vb-steps li{border-top:3px solid var(--maf-green);padding-top:10px;font-size:13px}
+.vb-steps li::before{counter-increment:s;content:"0" counter(s);display:block;font:700 13px var(--f-mono);color:var(--maf-green);margin-bottom:4px}
+.vb-steps b{display:block;font-family:var(--f-head);font-size:15px;margin-bottom:4px}
+.vb-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.vb-stat{background:#F3F1EC;border-radius:12px;padding:16px}
+.vb-stat b{display:block;font:700 30px/1 var(--f-head)}
+.vb-stat span{font-size:13px;color:var(--maf-muted)}
+.vb-team{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.vb-member{border:1px dashed var(--maf-rule);border-radius:12px;padding:14px;text-align:center;font-size:13px;color:var(--maf-muted)}
+.vb-member i{display:block;width:56px;height:56px;margin:0 auto 10px;border-radius:50%;background:#ECE9E2}
+.vb-foot{padding:18px 28px;font-size:12px;color:var(--maf-muted);border-top:1px solid var(--maf-rule)}
+@container (max-width:820px){.vb-labels,.vb-stats{grid-template-columns:repeat(2,1fr)}.vb-feature{grid-template-columns:1fr}.vb-steps,.vb-team{grid-template-columns:1fr 1fr}.vb-nav nav{display:none}}
+
+.vc{font-size:14px}
+.vc-nav{display:flex;align-items:center;gap:22px;padding:12px 22px;border-bottom:1px solid var(--maf-rule);background:var(--maf-surface)}
+.vc-mark{font:700 16px/1.1 var(--f-head)}
+.vc-mark small{display:block;font:500 11px/1.2 var(--f-body);color:var(--maf-muted)}
+.vc-tabs{display:flex;gap:4px;margin-left:8px}
+.vc-tabs a{padding:7px 12px;border-radius:8px;text-decoration:none;color:var(--maf-muted);font-weight:500}
+.vc-tabs a.on{background:#EEF5F1;color:var(--maf-green)}
+.vc-gh{margin-left:auto;font:12px var(--f-mono);color:var(--maf-muted)}
+.vc-hero{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:28px;padding:34px 22px 28px;align-items:center;background:#FAF9F6}
+.vc-eyebrow{font:600 12px/1 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--maf-green)}
+.vc-hero h3{font:700 clamp(26px,4.2cqi,40px)/1.08 var(--f-head);margin:12px 0}
+.vc-hero p{margin:0 0 16px;color:var(--maf-muted)}
+.vc-cta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.vc-cta a{padding:9px 14px;border-radius:8px;border:1px solid var(--maf-rule);text-decoration:none;color:var(--maf-ink);font-weight:600;background:#fff}
+.vc-cta a.pri{background:var(--maf-green);border-color:var(--maf-green);color:#fff}
+.vc-card{background:var(--maf-surface);border:1px solid var(--maf-rule);border-radius:14px;padding:12px;box-shadow:0 8px 24px rgba(22,25,29,.07)}
+.vc-cardbar{display:flex;justify-content:space-between;align-items:center;font:12px var(--f-mono);color:var(--maf-muted);margin-bottom:8px}
+.vc-ctl{display:flex;gap:6px;align-items:center;margin:8px 0}
+.vc-rows{display:grid;grid-template-columns:76px minmax(0,1fr);gap:5px 8px;align-items:center;font:11.5px var(--f-mono)}
+.vc-cmp{padding:28px 22px;border-top:1px solid var(--maf-rule)}
+.vc-cmp h4,.vc-tiles h4{font:700 20px/1.2 var(--f-head);margin:0 0 4px}
+.vc-cmp>p{margin:0 0 14px;color:var(--maf-muted)}
+.vc-callouts{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
+.vc-callouts div{background:#F3F1EC;border-radius:10px;padding:12px;font-size:13px}
+.vc-callouts b{display:block;font-family:var(--f-head);margin-bottom:3px}
+.vc-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:0 22px 26px}
+.vc-tile{border:1px solid var(--maf-rule);border-radius:12px;padding:14px;font-size:13px;color:var(--maf-muted)}
+.vc-tile b{display:block;color:var(--maf-ink);font:600 15px var(--f-head);margin-bottom:4px}
+@container (max-width:820px){.vc-hero{grid-template-columns:1fr}.vc-callouts,.vc-tiles{grid-template-columns:1fr}.vc-tabs{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<main class="page">
+<header class="ph">
+<div class="ph-mark">MAF FC · design exploration · UI0</div>
+<h1>MAF FC Possession Explorer: three directions</h1>
+<p>Three structurally different answers to the same question: how do we present an H/A/D/X possession engine as both a hackathon showcase and a working analysis tool?</p>
+<p>Every preview runs on the same data: the repository's synthetic end-to-end fixture (<code>tests/test_game_state.py</code>, 120 frames at 25 fps, graded half = frames 10–109). The Phase 3B and smooth50 labels shown are the real outputs of <code>src/possession.py</code> and <code>src/baseline.py</code> on that fixture. One shared playback clock drives every pitch, timeline and readout on this page.</p>
+<div class="meta"><span>2026-11-16</span><span>source: UI0 brief · README.md · docs/TECHNICAL_DOCUMENT.md · ff686e3</span><span>surface: landing + primary Explorer view</span><span>brand: provisional (_brand.md)</span></div>
+<p class="note"><b>Synthetic data only.</b> No match data, predictions or ground truth are used or reconstructed. The fixture has 5 tracks, 4 of them parked at one spot, so the pitches look sparse on purpose. Keyboard: focus any preview, then <kbd>Space</kbd> plays or pauses, <kbd>←</kbd>/<kbd>→</kbd> step one frame, and <kbd>Shift</kbd>+arrow steps 10 frames.</p>
+</header>
+
+<section class="variant" aria-labelledby="va-title">
+<div class="v-head"><span class="v-letter">A</span><h2 id="va-title">Analytics-first: the research workbench</h2></div>
+<p class="tradeoff"><b>Optimises for</b> inspecting why each frame got its label, with every signal on one screen. <b>Gives up</b> storytelling: a first-time visitor sees a tool before learning what H/A/D/X means.</p>
+<p class="ia">Routes: <b>/</b> = Explorer workspace · <b>/about</b> = method, team, credits (a single text page). Navigation: scenario rail plus keyboard; no landing page.</p>
+<div class="preview" data-kbd>
+<div class="va">
+<aside class="va-rail" aria-label="Scenarios and models">
+<div class="va-brand">MAF FC<small>Possession Explorer</small></div>
+<h4>Scenarios</h4>
+<button class="va-scn on" type="button">S1 · Kickoff → ball out → throw-in<em>synthetic · 120 f · tests/test_game_state.py</em></button>
+<button class="va-scn off" type="button" disabled>S2 · Contested loose ball<em>planned</em></button>
+<button class="va-scn off" type="button" disabled>S3 · Long tracking gap<em>planned</em></button>
+<button class="va-scn off" type="button" disabled>S4 · Mistimed set-piece tag<em>planned</em></button>
+<h4 style="margin-top:16px">Models</h4>
+<label class="va-chk"><input type="checkbox" checked> MAF FC Phase 3B</label>
+<label class="va-chk"><input type="checkbox" checked> Official smooth50</label>
+<label class="va-chk"><input type="checkbox" disabled> Synthetic reference <em style="font-size:11px;color:var(--maf-muted)">(none for S1)</em></label>
+</aside>
+<div class="va-main">
+<div class="va-bar"><span>S1 · Synthetic Home vs Synthetic Away</span><span data-readout="clock">f 0 · 0.00 s</span></div>
+<div data-pitch></div>
+</div>
+<aside class="va-insp" aria-label="Frame inspector">
+<h4>At this frame</h4>
+<div class="va-now"><span class="sh-chip" data-readout="chip-engine">X</span><span>Phase 3B</span><span class="sh-chip" data-readout="chip-base">H</span><span>smooth50</span></div>
+<h4>Why (Phase 3B)</h4>
+<p class="va-why" data-readout="why">…</p>
+<h4>Control evidence</h4>
+<p class="va-why" data-readout="evidence">…</p>
+<h4>Parameters (fixed in advance)</h4>
+<dl class="va-params"><dt>control radius</dt><dd>2.0 m</dd><dt>margin</dt><dd>1.0 m</dd><dt>confirm</dt><dd>10 obs</dd><dt>max ball gap</dt><dd>250 f</dd><dt>restart speed</dt><dd>4.0 m/s</dd></dl>
+</aside>
+<div class="va-dock">
+<div class="va-tx">
+<button class="sh-btn" type="button" data-act="start" aria-label="First frame">⏮</button>
+<button class="sh-btn" type="button" data-act="back" aria-label="Previous frame">◀</button>
+<button class="sh-btn primary" type="button" data-act="play" aria-label="Play">▶</button>
+<button class="sh-btn" type="button" data-act="fwd" aria-label="Next frame">▶︎|</button>
+<input class="sh-range grow" type="range" min="0" max="119" value="0" data-scrub aria-label="Frame">
+<span data-speeds></span>
+</div>
+<div class="va-rows">
+<span>Phase 3B</span><div data-strip="engine"></div>
+<span>smooth50</span><div data-strip="base"></div>
+<span>Evidence</span><div data-strip="evidence" data-thin></div>
+<span>Ball tracked</span><div data-strip="ball" data-thin></div>
+<span>Events</span><div class="va-ev"><span style="left:8.3%">half</span><span style="left:16.7%">kickoff</span><span style="left:50%">ball out</span><span style="left:70.8%">throw-in</span><span style="left:91.7%">half end</span></div>
+</div>
+</div>
+</div>
+</div>
+<p class="analysis">Strongest for the team and for reviewers who already know the challenge: all four signal tracks under the pitch make each label explainable at a glance. Its risk is the cold start, since judges land on a dense tool with no narrative. Pick it if the app is mainly a research instrument and the showcase lives elsewhere (the README and the technical document).</p>
+</section>
+
+<section class="variant" aria-labelledby="vb-title">
+<div class="v-head"><span class="v-letter">B</span><h2 id="vb-title">Showcase-first: the project story</h2></div>
+<p class="tradeoff"><b>Optimises for</b> a judge's first five minutes: problem, idea, evidence, team, in reading order. <b>Gives up</b> depth on screen: the Explorer is a featured embed, and serious inspection needs a separate, less integrated page.</p>
+<p class="ia">Routes: <b>/</b> = one long story page (hero → labels → featured Explorer → method → evidence → team) · <b>/explorer</b> = full tool. Navigation: anchor links plus a CTA.</p>
+<div class="preview" data-kbd>
+<div class="vb">
+<div class="vb-nav"><span class="vb-mark">MAF FC</span><nav><span>Challenge</span><span>Explorer</span><span>Method</span><span>Evidence</span><span>Team</span><span>GitHub ↗</span></nav></div>
+<div class="vb-hero">
+<div class="vb-eyebrow">More than a Hack 2027 · The Initial Challenge</div>
+<h3>Who has the ball, frame by frame, without guessing.</h3>
+<p>A deterministic, rule-based engine that labels every frame of a football match as home possession, away possession, dead ball, or no answer. No machine learning, no training data.</p>
+<div class="vb-cta"><a class="pri" href="#vb-feature">Watch it work</a><a href="#vb-method">How it works</a><a href="#vb-foot">GitHub</a></div>
+</div>
+<div class="vb-sec">
+<h4>Four labels, one per frame</h4>
+<p>Ranked on spellF1, which matches whole possessions by temporal overlap, so clean boundaries matter more than any single frame.</p>
+<div class="vb-labels">
+<div class="vb-label"><span class="sh-chip s-H">H</span><b>Home possession</b><span>Home has sustained control, or kept it through a pass or a loose ball.</span></div>
+<div class="vb-label"><span class="sh-chip s-A">A</span><b>Away possession</b><span>The same, for the away side.</span></div>
+<div class="vb-label"><span class="sh-chip s-D">D</span><b>Dead ball</b><span>Ball out of play, before a set piece is struck, before kickoff.</span></div>
+<div class="vb-label"><span class="sh-chip s-X">X</span><b>No answer</b><span>Outside a half, or before any possession can be established.</span></div>
+</div>
+</div>
+<div class="vb-sec" id="vb-feature">
+<h4>Featured: the Explorer</h4>
+<p>A synthetic kickoff, a ball over the line and a throw-in. Watch the engine change state.</p>
+<div class="vb-feature">
+<div data-pitch></div>
+<div>
+<div class="sh-legend" style="margin-bottom:10px"><span><i style="background:var(--st-H)"></i>H</span><span><i style="background:var(--st-A)"></i>A</span><span><i style="background:var(--st-D)"></i>D</span><span><i style="background:var(--st-X);border:1px solid var(--maf-rule)"></i>X</span></div>
+<div data-strip="engine"></div>
+<div class="ctl"><button class="sh-btn primary" type="button" data-act="play" aria-label="Play">▶</button><span data-readout="clock" style="font:12px var(--f-mono);color:var(--maf-muted)"></span></div>
+<p data-readout="why" style="font-size:13px;margin:10px 0 0"></p>
+<p style="margin:10px 0 0"><a href="#vb-feature">Open the full Explorer →</a></p>
+</div>
+</div>
+</div>
+<div class="vb-sec" id="vb-method">
+<h4>How it works</h4>
+<p>Five separate stages. Every parameter was fixed in advance from football reasoning.</p>
+<ol class="vb-steps">
+<li><b>Tracking</b>Nearest home and away player to the ball, plus ball position and speed.</li>
+<li><b>Control evidence</b>Within 2.0 m, with the other side at least 1.0 m further away.</li>
+<li><b>Dead ball</b>Ball out of play, the set-piece window before the strike, pre-kickoff.</li>
+<li><b>State machine</b>10 control observations to switch, backdated; held through loose balls.</li>
+<li><b>Output</b>H, A or D inside the halves; X outside them.</li>
+</ol>
+</div>
+<div class="vb-sec">
+<h4>Engineering evidence</h4>
+<p>What we can show without touching match labels.</p>
+<div class="vb-stats">
+<div class="vb-stat"><b>143</b><span>synthetic tests passing (2 skipped without the official clone)</span></div>
+<div class="vb-stat"><b>0</b><span>match labels used for training or tuning</span></div>
+<div class="vb-stat"><b>9</b><span>parameters fixed in advance (8 in use)</span></div>
+<div class="vb-stat"><b>1:1</b><span>byte-identical output on every rerun</span></div>
+</div>
+</div>
+<div class="vb-sec">
+<h4>The team</h4>
+<p>Four members: Marc, Fahmy, Faris and Eslam.</p>
+<div class="vb-team"><div class="vb-member"><i></i>Marc<br>Team member</div><div class="vb-member"><i></i>Fahmy<br>Team member</div><div class="vb-member"><i></i>Faris<br>Team member</div><div class="vb-member"><i></i>Eslam<br>Team member</div></div>
+</div>
+<div class="vb-foot" id="vb-foot">MAF FC · github.com/Marcoc51/more-than-a-hack-2027 · MIT · parsing and baseline code adapted from the official starter kit, © 2026-2027 Metrica Sports (MIT)</div>
+</div>
+</div>
+<p class="analysis">The clearest story for judges and the easiest to read on a phone. The feature embed is deliberately thin (one timeline, one button), so comparing models or inspecting evidence means leaving for /explorer, which then needs its own design. Pick it if the competition presentation matters more than the tool.</p>
+</section>
+
+<section class="variant" aria-labelledby="vc-title">
+<div class="v-head"><span class="v-letter">C</span><h2 id="vc-title">Balanced hybrid: a working landing page</h2></div>
+<p class="tradeoff"><b>Optimises for</b> showing and explaining at once: the landing page is itself a working, comparable Explorer, and the deep views are one tab away. <b>Gives up</b> some simplicity: four routes and two Explorer densities to design, build and test.</p>
+<p class="ia">Routes: <b>/</b> Overview (hero, live mini-Explorer, comparison band) · <b>/explorer</b> (Concept A workspace) · <b>/method</b> (stages, parameters, limitations) · <b>/team</b>. Navigation: persistent top tabs, collapsing to a menu on mobile.</p>
+<div class="preview" data-kbd>
+<div class="vc">
+<div class="vc-nav"><span class="vc-mark">MAF FC<small>Possession Explorer</small></span><nav class="vc-tabs"><a class="on" href="#vc-title">Overview</a><a href="#vc-title">Explorer</a><a href="#vc-title">Method</a><a href="#vc-title">Team</a></nav><span class="vc-gh">GitHub ↗</span></div>
+<div class="vc-hero">
+<div>
+<div class="vc-eyebrow">More than a Hack 2027 · Ball Possession</div>
+<h3>Possession you can watch, and check.</h3>
+<p>Our engine labels every frame H, A, D or X from tracking data and Smart Tagging restarts. Play the synthetic scenario on the right, then compare it with the official smooth50 baseline on exactly the same input.</p>
+<div class="vc-cta"><a class="pri" href="#vc-title">Open the Explorer</a><a href="#vc-title">How it works</a></div>
+<div class="sh-legend"><span><i style="background:var(--st-H)"></i>H home</span><span><i style="background:var(--st-A)"></i>A away</span><span><i style="background:var(--st-D)"></i>D dead ball</span><span><i style="background:var(--st-X);border:1px solid var(--maf-rule)"></i>X no answer</span></div>
+</div>
+<div class="vc-card">
+<div class="vc-cardbar"><span>Synthetic scenario S1</span><span data-readout="clock"></span></div>
+<div data-pitch></div>
+<div class="vc-ctl"><button class="sh-btn primary" type="button" data-act="play" aria-label="Play">▶</button><button class="sh-btn" type="button" data-act="back" aria-label="Previous frame">◀</button><button class="sh-btn" type="button" data-act="fwd" aria-label="Next frame">▶︎|</button><input class="sh-range" type="range" min="0" max="119" value="0" data-scrub aria-label="Frame"></div>
+<div class="vc-rows"><span>Phase 3B</span><div data-strip="engine"></div><span>smooth50</span><div data-strip="base"></div></div>
+<p data-readout="why" style="font-size:12.5px;margin:8px 0 0;color:var(--maf-muted)"></p>
+</div>
+</div>
+<div class="vc-cmp">
+<h4>Same input, two answers</h4>
+<p>Synthetic scenario S1 through the official nearest-player baseline (±50-frame vote) and through MAF FC Phase 3B.</p>
+<div class="vc-rows" style="grid-template-columns:90px minmax(0,1fr)"><span>Phase 3B</span><div data-strip="engine"></div><span>smooth50</span><div data-strip="base"></div></div>
+<div class="vc-callouts">
+<div><b>The stoppage exists</b>Phase 3B shows 25 dead-ball frames after the ball leaves the pitch; smooth50 has no D in this scenario.</div>
+<div><b>Restart at the strike</b>Away possession starts at the throw-in strike (frame 85); smooth50 switches at frame 68, during the stoppage.</div>
+<div><b>Ungraded frames</b>Outside the graded half, Phase 3B answers X; smooth50 labels every frame.</div>
+</div>
+</div>
+<div class="vc-tiles">
+<div class="vc-tile"><b>Explorer →</b>Full workspace: scenarios, inspector, four signal tracks (Concept A layout).</div>
+<div class="vc-tile"><b>Method →</b>Five stages, nine parameters, known limitations, reproduction.</div>
+<div class="vc-tile"><b>Team →</b>Four members. Repository and credits.</div>
+</div>
+</div>
+</div>
+<p class="analysis">The only direction where the first screen both explains and proves something: the comparison callouts are computed from real engine output on shared synthetic input. The risk is scope, because it is effectively Concept A plus a lighter Concept B, but both reuse the same pitch, timeline and clock components. Pick it if one codebase must serve both the judges and the team's research.</p>
+</section>
+
+<section class="compare" aria-labelledby="cmp-title">
+<h2 id="cmp-title">Side by side</h2>
+<div class="compare-wrap"><table>
+<thead><tr><th scope="col">Dimension</th><th scope="col">A · Analytics-first</th><th scope="col">B · Showcase-first</th><th scope="col">C · Hybrid</th></tr></thead>
+<tbody>
+<tr><th scope="row">Information architecture</th><td>1 workspace + 1 about page</td><td>1 long story page + 1 tool page</td><td>4 tabs: Overview, Explorer, Method, Team</td></tr>
+<tr><th scope="row">First-screen hierarchy</th><td>Pitch → inspector → tracks</td><td>Headline → CTA → labels</td><td>Headline + live mini-Explorer side by side</td></tr>
+<tr><th scope="row">Density</th><td>High (4 tracks, inspector, parameters)</td><td>Low (one embed, one track)</td><td>Medium on Overview, high in Explorer</td></tr>
+<tr><th scope="row">Navigation</th><td>Scenario rail, keyboard</td><td>Anchor scroll, CTA buttons</td><td>Persistent tabs, deep links</td></tr>
+<tr><th scope="row">Mobile</th><td>Weakest: inspector and rail stack below the pitch</td><td>Best: single column by design</td><td>Good: hero stacks; Explorer as in A</td></tr>
+<tr><th scope="row">Interaction</th><td>Full transport, model toggles, scrub, inspect</td><td>Play/pause only in the embed</td><td>Transport + scrub on landing; full set in Explorer</td></tr>
+<tr><th scope="row">Build effort (relative)</th><td>Medium</td><td>Low–medium (+ separate tool page)</td><td>Medium–high (A's components + 3 light pages)</td></tr>
+<tr><th scope="row">Shared components</th><td colspan="3">Pitch (SVG), possession strip, transport, clock store. All three directions use the same four components.</td></tr>
+</tbody></table></div>
+</section>
+
+<section class="decision" aria-labelledby="dec-title">
+<h2 id="dec-title">Decision</h2>
+<ul>
+<li>If the app is mainly <b>the team's research instrument</b>, pick <b>A</b>.</li>
+<li>If the app is mainly <b>the judges' first impression</b>, and the tool can be thin, pick <b>B</b>.</li>
+<li>If <b>one codebase must do both</b>, and the extra pages are affordable, pick <b>C</b>. Build A's Explorer first (UI1), then the Overview page around it.</li>
+</ul>
+</section>
+</main>
+<script>
+const DATA = {"n":120,"half":[[10,110]],"teams":["Synthetic Home","Synthetic Away"],"tracks":[1,0,0,1,0],"engine":"XXXXXXXXXXDDDDDDDDDDHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHDDDDDDDDDDDDDDDDDDDDDDDDDAAAAAAAAAAAAAAAAAAAAAAAAAXXXXXXXXXX","smooth50":"HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","evidence":"HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH....._______________AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","source":[0,0,0,0,0,0,0,0,0,0,4,4,4,4,4,4,4,4,4,4,5,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0],"restarts":{"20":0,"85":2},"frames":[{"p":[[0.9,0.9],[0.5,0.5],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[0.5,0.5,0.0]},{"p":[[0.9,0.9],[0.5,0.5],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[0.5,0.5,0.0]},{"p":[[0.9,0.9],[0.5,0.5],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[0.5,0.5,0.0]},{"p":[[0.9,0.9],[0.5,0.5],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[0.5,0.5,0.0]},{"p":[[0.9,0.9],[0.5,0.5],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[0.5,0.5,0.0]},{"p":[[0.9,0.9],[0.5,0.5],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[0.5,0.5,0.0]},{"p":[[0.9,0.9],[0.5,0.5],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[0.5,0.5,0.0]},{"p":[[0.9,0.9],[0.5,0.5],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[0.5,0.5,0.0]},{"p":[[0.9,0.9],[0.5,0.5],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[0.5,0.5,0.0]},{"p":[[0.9,0.9],[0.5,0.5],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[0.5,0.5,0.0]},{"p":[[0.9,0.9],[0.5,0.5],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[0.5,0.5,0.0]},{"p":[[0.9,0.9],[0.5,0.5],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[0.5,0.5,0.0]},{"p":[[0.9,0.9],[0.5,0.5],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[0.5,0.5,0.0]},{"p":[[0.9,0.9],[0.5,0.5],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[0.5,0.5,0.0]},{"p":[[0.9,0.9],[0.5,0.5],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[0.5,0.5,0.0]},{"p":[[0.9,0.9],[0.5,0.5],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[0.5,0.5,0.0]},{"p":[[0.9,0.9],[0.5,0.5],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[0.5,0.5,0.0]},{"p":[[0.9,0.9],[0.5,0.5],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[0.5,0.5,0.0]},{"p":[[0.9,0.9],[0.5,0.5],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[0.5,0.5,0.0]},{"p":[[0.9,0.9],[0.5,0.5],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[0.5,0.5,0.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,10.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.3,0.5],[0.9,0.9],[0.9,0.9]],"b":[0.3,0.5,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[1.05,0.5,2.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[1.05,0.5,2.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[1.05,0.5,2.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[1.05,0.5,2.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[1.05,0.5,2.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":null},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":null},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":null},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":null},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":null},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":null},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":null},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":null},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":null},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":null},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":null},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":null},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":null},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":null},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":null},{"p":[[0.6,0.01],[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[0.6,0.0,0.0]},{"p":[[0.6,0.01],[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[0.6,0.0,0.0]},{"p":[[0.6,0.01],[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[0.6,0.0,0.0]},{"p":[[0.6,0.01],[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[0.6,0.0,0.0]},{"p":[[0.6,0.01],[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.9,0.9]],"b":[0.6,0.0,0.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,8.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]},{"p":[[0.9,0.9],[0.9,0.9],[0.9,0.9],[0.7,0.3],[0.9,0.9]],"b":[0.7,0.3,1.0]}]};
+const N = DATA.n, FPS = 25, HALF = DATA.half[0];
+const SPEEDS = [0.25, 0.5, 1, 2];
+const state = { frame: 0, playing: false, speed: 1 };
+const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+const NAMES = { H: 'Home possession', A: 'Away possession', D: 'Dead ball', X: 'No answer' };
+const WHY = ['No possession established yet, so the answer is X.',
+  'Control evidence for this team in this frame.',
+  'Ball tracked, no new evidence: possession carried over.',
+  'Ball not tracked: possession carried over (gap within 10 s).',
+  'Confirmed dead ball: out of play, before a set-piece strike, or before kickoff.',
+  'Restart strike located from a Smart Tagging set piece.'];
+const EVTXT = { H: 'Home has credible control (nearest within 2.0 m, opponent ≥ 1.0 m further).',
+  A: 'Away has credible control.', '.': 'Ball tracked, but nobody has credible control.', _: 'Ball not tracked in this frame.' };
+
+function runs(s) { const out = []; let i = 0; while (i < s.length) { let j = i; while (j < s.length && s[j] === s[i]) j++; out.push([s[i], i, j]); i = j; } return out; }
+const SERIES = {
+  engine: DATA.engine, base: DATA.smooth50,
+  evidence: DATA.evidence.replace(/[HA]/g, 'e'),
+  ball: DATA.frames.map(f => f.b ? 'b' : 'g').join('')
+};
+const SEGCLASS = { H: 's-H', A: 's-A', D: 's-D', X: 's-X', e: 's-ev', '.': 's-X', _: 's-gap', b: 's-ev', g: 's-gap' };
+
+function buildStrip(el) {
+  const key = el.dataset.strip, s = SERIES[key];
+  el.classList.add('sh-strip'); if (el.hasAttribute('data-thin')) el.classList.add('thin');
+  el.setAttribute('role', 'img');
+  el.setAttribute('aria-label', key + ' timeline: ' + runs(s).map(([c, a, b]) => (NAMES[c] || c) + ' frames ' + a + '–' + (b - 1)).join('; '));
+  for (const [c, a, b] of runs(s)) {
+    const seg = document.createElement('div');
+    seg.className = 'sh-seg ' + SEGCLASS[c];
+    seg.style.flex = (b - a) + ' 0 0';
+    if ('HADX'.includes(c) && b - a >= 8) seg.textContent = c;
+    seg.title = (NAMES[c] || c) + ' · frames ' + a + '–' + (b - 1);
+    el.appendChild(seg);
+  }
+  const head = document.createElement('div'); head.className = 'sh-head'; head.dataset.head = ''; el.appendChild(head);
+  el.addEventListener('click', e => { const r = el.getBoundingClientRect(); setFrame(Math.round((e.clientX - r.left) / r.width * (N - 1))); });
+}
+
+const SVGNS = 'http://www.w3.org/2000/svg';
+function buildPitch(host) {
+  const svg = document.createElementNS(SVGNS, 'svg');
+  svg.setAttribute('viewBox', '-4 -4 113 76'); svg.setAttribute('class', 'sh-pitch');
+  svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', 'Synthetic pitch view, current frame');
+  svg.innerHTML = '<rect class="ln" x="0" y="0" width="105" height="68"/><line class="ln" x1="52.5" y1="0" x2="52.5" y2="68"/>' +
+    '<circle class="ln" cx="52.5" cy="34" r="9.15"/><rect class="ln" x="0" y="13.84" width="16.5" height="40.32"/>' +
+    '<rect class="ln" x="88.5" y="13.84" width="16.5" height="40.32"/><rect class="ln" x="0" y="24.84" width="5.5" height="18.32"/>' +
+    '<rect class="ln" x="99.5" y="24.84" width="5.5" height="18.32"/>';
+  const players = DATA.tracks.map(t => { const c = document.createElementNS(SVGNS, 'circle'); c.setAttribute('r', '1.4'); c.setAttribute('class', 'pl ' + (t === 0 ? 'h' : 'a')); svg.appendChild(c); return c; });
+  const ghost = document.createElementNS(SVGNS, 'circle'); ghost.setAttribute('r', '1.6'); ghost.setAttribute('class', 'ghost'); svg.appendChild(ghost);
+  const gtxt = document.createElementNS(SVGNS, 'text'); gtxt.setAttribute('class', 'gtxt'); gtxt.textContent = 'ball not tracked'; svg.appendChild(gtxt);
+  const ball = document.createElementNS(SVGNS, 'circle'); ball.setAttribute('r', '0.9'); ball.setAttribute('class', 'ball'); svg.appendChild(ball);
+  host.appendChild(svg);
+  return { players, ball, ghost, gtxt };
+}
+
+let lastBall = null;
+const pitches = [], strips = [];
+function render() {
+  const f = state.frame, fr = DATA.frames[f];
+  let lb = null; for (let i = f; i >= 0; i--) if (DATA.frames[i].b) { lb = DATA.frames[i].b; break; }
+  for (const p of pitches) {
+    fr.p.forEach((xy, k) => { p.players[k].setAttribute('cx', xy[0] * 105); p.players[k].setAttribute('cy', xy[1] * 68); });
+    const show = !!fr.b; p.ball.style.display = show ? '' : 'none';
+    p.ghost.style.display = p.gtxt.style.display = (!show && lb) ? '' : 'none';
+    if (show) { p.ball.setAttribute('cx', fr.b[0] * 105); p.ball.setAttribute('cy', fr.b[1] * 68); }
+    else if (lb) { p.ghost.setAttribute('cx', lb[0] * 105); p.ghost.setAttribute('cy', lb[1] * 68); p.gtxt.setAttribute('x', lb[0] * 105 - 8); p.gtxt.setAttribute('y', lb[1] * 68 - 3); }
+  }
+  for (const h of document.querySelectorAll('[data-head]')) h.style.left = 'calc(' + (f / (N - 1) * 100) + '% - 1px)';
+  for (const r of document.querySelectorAll('[data-scrub]')) r.value = f;
+  const e = DATA.engine[f], b = DATA.smooth50[f];
+  const inHalf = f >= HALF[0] && f < HALF[1];
+  const why = inHalf ? WHY[DATA.source[f]] : 'Outside the graded half: ungraded, written as X.';
+  const restart = DATA.restarts[String(f)];
+  set('clock', 'f ' + f + ' · ' + (f / FPS).toFixed(2) + ' s');
+  set('why', 'Phase 3B says ' + e + ' (' + NAMES[e] + '). ' + why + (restart !== undefined ? ' Restart frame.' : ''));
+  set('evidence', EVTXT[DATA.evidence[f]]);
+  chip('chip-engine', e); chip('chip-base', b);
+}
+function set(k, v) { for (const el of document.querySelectorAll('[data-readout="' + k + '"]')) el.textContent = v; }
+function chip(k, v) { for (const el of document.querySelectorAll('[data-readout="' + k + '"]')) { el.textContent = v; el.className = 'sh-chip s-' + v; el.setAttribute('aria-label', NAMES[v]); } }
+function setFrame(f) { state.frame = Math.max(0, Math.min(N - 1, f)); render(); }
+function setPlaying(p) {
+  state.playing = p;
+  for (const btn of document.querySelectorAll('[data-act="play"]')) { btn.textContent = p ? '❚❚' : '▶'; btn.setAttribute('aria-label', p ? 'Pause' : 'Play'); }
+  if (p) { if (state.frame >= N - 1) setFrame(0); last = performance.now(); acc = 0; requestAnimationFrame(tick); }
+}
+let last = 0, acc = 0;
+function tick(now) {
+  if (!state.playing) return;
+  acc += (now - last) / 1000 * FPS * state.speed; last = now;
+  if (acc >= 1) { const step = Math.floor(acc); acc -= step; if (state.frame + step >= N - 1) { setFrame(N - 1); setPlaying(false); return; } setFrame(state.frame + step); }
+  requestAnimationFrame(tick);
+}
+function act(a) {
+  if (a === 'play') setPlaying(!state.playing);
+  else if (a === 'back') { setPlaying(false); setFrame(state.frame - 1); }
+  else if (a === 'fwd') { setPlaying(false); setFrame(state.frame + 1); }
+  else if (a === 'start') { setPlaying(false); setFrame(0); }
+}
+document.querySelectorAll('[data-pitch]').forEach(h => pitches.push(buildPitch(h)));
+document.querySelectorAll('[data-strip]').forEach(buildStrip);
+document.querySelectorAll('[data-act]').forEach(btn => btn.addEventListener('click', () => act(btn.dataset.act)));
+document.querySelectorAll('[data-scrub]').forEach(r => r.addEventListener('input', () => { setPlaying(false); setFrame(+r.value); }));
+document.querySelectorAll('[data-speeds]').forEach(host => SPEEDS.forEach(s => {
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'sh-btn'; b.textContent = s + '×';
+  b.setAttribute('aria-pressed', String(s === state.speed));
+  b.addEventListener('click', () => { state.speed = s; document.querySelectorAll('[data-speeds] .sh-btn').forEach(x => x.setAttribute('aria-pressed', String(x.textContent === s + '×'))); });
+  host.appendChild(b);
+}));
+document.querySelectorAll('[data-kbd]').forEach(p => { p.tabIndex = 0; p.setAttribute('aria-label', 'Interactive preview; Space plays, arrows step'); p.addEventListener('keydown', e => {
+  if (e.target.matches('input')) return;
+  if (e.key === ' ') { e.preventDefault(); act('play'); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); setPlaying(false); setFrame(state.frame + (e.shiftKey ? 10 : 1)); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); setPlaying(false); setFrame(state.frame - (e.shiftKey ? 10 : 1)); }
+}); });
+setFrame(42);
+if (!reduce.matches) setPlaying(false);
+</script>
+</body>
+</html>
