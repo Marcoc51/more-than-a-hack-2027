@@ -3,7 +3,8 @@
 > **Superseded for the application (UI1).** After UI0, the project owner chose the **Motus
 > visual identity** for the MAF FC Possession Explorer. That covers Motus colours, typography,
 > Night/Floodlight themes and styling conventions, with **MAF FC** as the only public brand and
-> **no Motus logo**. Motus has agreed to this use. The app's tokens now live in
+> **no Motus logo**. The project owner reports Motus agreement; no public-distribution grant is
+> recorded in this repository. The app's tokens now live in
 > `explorer/src/styles/tokens.css`, whose header lists which values are Motus-derived.
 >
 > The palette below is the independent provisional palette used only for the UI0 exploration

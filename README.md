@@ -35,8 +35,9 @@ The method, its parameters and its limitations are described in
 | `outputs/` | generated predictions | **no** |
 | `source/` | optional local clone of the official repository, used only as a reference | **no** |
 
-Nothing under `source/` is needed to generate the submission or to run the tests. The few tests
-that compare against the official code are skipped when it is absent.
+Nothing under `source/` is needed to generate the competition submission. The full integrated
+Python test suite requires pinned public official scorer and reference files under `source/`;
+install them with the checksum-verified setup command in the Tests section.
 
 ## Requirements
 
@@ -94,11 +95,22 @@ organisers' nearest-player baseline.
 
 ## Tests
 
+The original competition-engine checks use synthetic fixtures and do not require the optional
+benchmark setup:
+
 ```powershell
-python -m pytest tests -q
+python -m pytest tests/test_baseline.py tests/test_possession.py tests/test_game_state.py -q
 ```
 
-All tests use small, artificial tracking and Smart Tagging files built inside the tests. They cover:
+For the full integrated Python suite, install the pinned public official files and then run all
+synthetic tests, including the optional benchmark and Explorer exporter tests:
+
+```powershell
+python benchmark/setup_official.py
+python -m pytest tests tools -q
+```
+
+The tests use small, artificial tracking and Smart Tagging files built inside the tests. They cover:
 - parsing, the team mapping, control evidence and the state machine;
 - halves, kickoffs, out-of-bounds, restarts and conflicting tags;
 - frame alignment, the output format and determinism.
@@ -112,6 +124,13 @@ license. The IDSSE benchmark keeps provider possession/status labels and events 
 prediction inputs and has no Smart Tagging restart bridge. Its reported numbers describe agreement
 with provider annotations on one development match, not competition results or independently
 verified possession accuracy. See [the IDSSE benchmark report](docs/IDSSE_BENCHMARK_E1D_B.md).
+
+## Synthetic React Explorer
+
+The optional [MAF FC Possession Explorer](explorer/README.md) plays four scripted synthetic
+scenarios exported by the unchanged Python engines. Its scenario scores compare with scripted
+references only; it bundles no competition data, videos, labels or predictions and reports no
+competition-match result. The app is not needed to generate the competition CSV.
 
 ## Method in brief
 
@@ -156,4 +175,7 @@ None was fitted to, or checked against, the competition match. See the technical
 - **Adapted code:** parts of `src/` are adapted from the official
   [More than a Hack 2027 starter kit](https://github.com/metrica-sports/more-than-a-hack-2027),
   © 2026-2027 Metrica Sports, MIT. Its full notice is reproduced in `src/baseline.py`.
+- **Explorer asset exception:** the team portraits and organiser logos are excluded from this
+  repository's MIT licence, as are the Motus-derived styling values. Their public-use rights
+  require separate evidence; see [Explorer rights status](explorer/README.md#visual-identity-and-licences).
 - **The match data** is not covered by either licence.

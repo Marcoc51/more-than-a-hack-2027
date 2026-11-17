@@ -81,9 +81,11 @@ It checks:
 ## Team data
 
 MAF FC has four members: Marc, Fahmy, Faris and Eslam. Their names and links, approved by the project owner, live in
-[`src/team/members.ts`](src/team/members.ts); no other personal details are shown.
+[`src/team/members.ts`](src/team/members.ts); no biographies or contact details are shown.
 - Photos are 400 x 500 px WebP portraits in `public/team/`, cropped from owner-supplied images with all metadata
-  removed. A missing or broken photo falls back to the member's initial.
+  removed. A missing or broken photo falls back to the member's initial. The project owner supplied
+  the images, but this repository contains no individual consent record covering public GitHub
+  distribution and public site display.
 - The grid has four columns on wide screens, two on tablets and one horizontal card per row on phones.
 
 ## Data
@@ -145,7 +147,8 @@ future Home page) only needs another provider.
 
 - **Brand:** the app is publicly branded **MAF FC** / **MAF FC Possession Explorer**. It shows no
   Motus logo or artwork, and it is not an official Motus product.
-- **Styling:** the look follows the **Motus visual identity**, used with Motus's permission:
+- **Styling:** the look follows the **Motus visual identity**. The project owner reports Motus
+  permission, but this repository contains no grant specifying public GitHub or deployment scope:
   - Night (dark, default) and Floodlight (light) themes, Volt accent;
   - Space Grotesk and Inter;
   - Motus spacing, radii, control sizes, motion and control conventions.
@@ -161,10 +164,35 @@ future Home page) only needs another provider.
   The Metrica Sports, Barça Innovation Hub and Mobile World Capital Barcelona logos in
   `public/organisers/` were supplied by the project owner for this use and are shown unmodified on a
   black plate, each linking to the organiser's official site. They belong to their owners, are not
-  covered by this repository's MIT licence, and do not imply endorsement of MAF FC.
+  covered by this repository's MIT licence, and do not imply endorsement of MAF FC. Public event
+  branding or attribution guidance is not, by itself, a grant to redistribute these artwork files;
+  no such grant is recorded in this repository.
 - **Fonts:** Inter and Space Grotesk, from the public
   [`@fontsource-variable`](https://fontsource.org) npm packages, under the SIL Open Font Licence
   1.1. The licence texts ship in those packages.
 - **Official scorer:** `tools/vendor/possession_metrics.py`, MIT, © 2026-2027 Metrica Sports; see
   `tools/vendor/README.md`.
-- **Code:** MIT (see [`../LICENSE`](../LICENSE)).
+- **Code:** MIT (see [`../LICENSE`](../LICENSE)). The repository MIT licence does not license
+  the portraits, organiser artwork or Motus-derived styling values.
+
+### Publication rights still to verify
+
+No independent permission records for the four portraits, four organiser logo files or
+Motus-derived visual identity are included here. The relevant paths are:
+
+- `public/team/{marc,fahmy,faris,eslam}.webp`: obtain each person's consent to both public
+  repository distribution and public site display, plus rights from the photographer or source.
+  If unavailable, remove the images and use the existing initial-letter fallback.
+- `public/organisers/{metrica-sports.webp,barca-innovation-hub.webp,barca-innovation-hub-dark-text.png,mobile-world-capital-barcelona.webp}`:
+  obtain artwork redistribution/display permission from the rights holders, or use text links
+  and the existing text fallback.
+- `src/styles/tokens.css`, the Motus-derived conventions in `src/styles/app.css`, and
+  `../design-explorations/{_brand.md,ui3a-direction.html}`: confirm that Motus's grant covers
+  the selected identity and public distribution. If it does not, replace the Motus-specific
+  palette, theme names and token selection with independently chosen MAF FC values while
+  keeping the functional layout, navigation and openly licensed fonts/icons.
+
+Ordinary spacing, focus, layout and motion ideas implemented independently do not require
+installing Motus code. No Motus package, logo, artwork, component, icon or font file is bundled.
+Do not publish or deploy the current artwork and Motus-derived identity until the required
+scope is documented.

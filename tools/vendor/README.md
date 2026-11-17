@@ -6,6 +6,8 @@
 - Path: `evaluation/possession_metrics.py`
 - Commit: `f8f2629ff1e0985f81d7e59d8413678514ee1530` (`main`, 2026-10-23)
 - SHA-256 of this file: `341bad48904b489d6e875397b27687f5d6a4d22a397f3dc8af3a00d48f16874d`
+- The checksum is for the upstream LF bytes. Windows checkouts may use CRLF; the exporter and
+  its integrity test normalize CRLF to LF before hashing, without changing scorer logic.
 - Licence: MIT, Copyright (c) 2026-2027 Metrica Sports. The upstream `LICENSE` is reproduced in
   [`LICENSE-metrica.txt`](LICENSE-metrica.txt).
 

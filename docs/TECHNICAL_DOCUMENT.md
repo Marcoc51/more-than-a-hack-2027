@@ -158,9 +158,9 @@ trackers such as the Tryolabs write-up; the specific numbers are our own.
 
 ## 5. Testing
 
-All verification used **synthetic data only**. The tests build small artificial tracking and
-Smart Tagging files and check exact frame-by-frame outputs. There are 145 tests (`pytest`), all
-passing; they cover:
+The original Phase 3B competition-engine verification used **synthetic data only**. Its 145
+passing tests build small artificial tracking and Smart Tagging files and check exact
+frame-by-frame outputs; they cover:
 - **Parsing and mapping:** parsing and malformed lines, the home/away mapping, missing players
   and missing ball, metres versus normalised distances, exact ties.
 - **Control and possession:** passes between teammates, brief versus sustained opposing control,
@@ -204,11 +204,16 @@ python -m pip install -r requirements.txt        # Python 3.10; numpy 1.24.1, pa
 $env:MTAH_DATA_DIR = "C:\path\to\data-dir"       # contains tactical/BAR-ATH_tactical_*
 python src/possession.py --out outputs/submission.csv
 python src/check_submission.py outputs/submission.csv
-python -m pytest tests -q                         # synthetic tests, no data needed
+python -m pytest tests/test_baseline.py tests/test_possession.py tests/test_game_state.py -q
 ```
 
 The output is the same byte for byte on every run. The official reference repository is not
-needed.
+needed for competition CSV generation. The optional integrated suite has 220 passing synthetic
+Python tests across `tests/` and `tools/`; it also checks external adapters and the Explorer
+exporter. To run that suite, first install the pinned public official files with
+`python benchmark/setup_official.py`, then run `python -m pytest tests tools -q`. The
+separate IDSSE study used one external match to measure provider-annotation agreement; it was
+not synthetic-only validation and is not a competition score.
 
 ## 8. Known limitations and uncertainties
 
@@ -250,6 +255,10 @@ CC BY 4.0. The external benchmark excludes provider labels and events from predi
 does not bridge IDSSE events into Smart Tagging restarts. Its single development-match numbers are
 agreement with DFL provider annotations, not competition performance or independent possession
 ground truth. See [the detailed benchmark report](IDSSE_BENCHMARK_E1D_B.md).
+
+The optional [React Explorer](../explorer/README.md) displays scripted synthetic scenarios and
+their engine-generated predictions. It reads no competition match data and is not part of CSV
+generation; its synthetic scores are separate from the IDSSE provider-agreement result.
 
 ## 9. References and attribution
 
