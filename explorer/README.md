@@ -117,10 +117,10 @@ The separate [`../tools/export_local_scenario.py`](../tools/export_local_scenari
 lets the owner crop existing authorized tracking and existing prediction CSVs without
 running inference, altering predictions, using ground truth, or annotating anything.
 
-**Real-data limitation:** The local exporter has not yet produced a full export from the owner's
-actual ATD input. Its metadata (46 track slots) and partially missing groups are now handled;
-it still rejects frame gaps, which the delivered file does not contain according to the
-organisers' starter documentation.
+**Real-data status:** The owner has exported and viewed a 7,500-frame window of the competition
+match with this adapter, including its 46 track slots and partially missing tracking groups.
+Other windows, other matches and other tracking formats are not all verified. Frame gaps are
+still rejected; according to the organisers' starter documentation, the delivered file has none.
 
 Run from the repository root in Windows PowerShell (Python 3.10; no additional dependencies):
 
@@ -162,7 +162,8 @@ python tools/export_local_scenario.py --diagnose --metadata "$metadata" --tracki
 Choose a new output filename on every run: the adapter never overwrites a file. It writes
 only plain file names directly inside the Git-ignored repository `.local-explorer/` directory
 and rejects anything else. Never put exports in `public/`, commit them, or share them
-publicly. No actual competition data was processed while implementing or testing this adapter.
+publicly. The adapter's implementation and automated tests use synthetic inputs only; real-data
+checks are run by the owner on their own computer.
 
 Inputs are normalized ATD `frame:player-groups:ball` TXT and the metadata XML's ordered
 teams/player slots. The first team is home. Each group is `x,y,speed`; raw frame IDs are
@@ -218,6 +219,23 @@ the page shows no accuracy, F1, precision, recall or confusion matrix, and neith
 treated as ground truth. Disagreement between predictions is not evaluation against reference
 labels. The project's only reference-based numbers are the public five-minute results in the
 root README and the synthetic scenario checks on the public Compare page.
+
+### Troubleshooting
+
+- **Setup instructions appear instead of match data:** no export is registered, or
+  `.local-explorer/explorer-config.json` lists none that is available. The page states the
+  reason. Re-run the exporter with `--register`.
+- **"The local export loader is not running":** the page was opened from `npm run dev` (public
+  demo). Start `npm run dev:local` instead.
+- **The exporter refuses a file:** re-run it with `--diagnose` (see above). If the output file
+  already exists, choose a new `--out` name; exports are never overwritten.
+- **`EPERM` from Vite on Windows when starting a dev server:** `dev` and `dev:local` share the
+  dependency cache in `explorer/node_modules/.vite`, and Windows can lock it (another running
+  Vite server, an antivirus scan or a sync client). Stop every running Vite server, then run
+  `npm run dev:local -- --force` to rebuild the cache. If the error persists, delete the cache
+  from `explorer/` with `Remove-Item -Recurse -Force node_modules\.vite` and start again.
+- **`npm` is blocked by the PowerShell execution policy:** use `npm.cmd` (for example
+  `npm.cmd run dev:local`).
 
 ## Run
 
