@@ -94,7 +94,7 @@ describe('Explorer app', () => {
     await renderLoaded();
     seekTo(100);
     const inspector = screen.getByRole('complementary', { name: 'Frame inspector' });
-    expect(within(inspector).getByText('Phase 3B output')).toBeInTheDocument();
+    expect(within(inspector).getByText('Possession Engine output')).toBeInTheDocument();
     expect(within(inspector).getByText('smooth50 output')).toBeInTheDocument();
     expect(within(inspector).getByText('synthetic annotations')).toBeInTheDocument();
     expect(within(inspector).getByText('UI description')).toBeInTheDocument();
@@ -159,7 +159,7 @@ describe('timeline seek control (A-01)', () => {
     expect(slider).toHaveAttribute('aria-valuemin', '0');
     expect(slider).toHaveAttribute('aria-valuemax', String(s1.frameCount - 1));
     expect(slider).toHaveAttribute('aria-valuenow', '0');
-    expect(slider.getAttribute('aria-valuetext')).toMatch(/^Frame 0 of 399, 0\.00 s\. MAF FC Phase 3B: No answer\./);
+    expect(slider.getAttribute('aria-valuetext')).toMatch(/^Frame 0 of 399, 0\.00 s\. Rule-Based Possession Engine: No answer\./);
   });
 
   it('seeks exactly one frame per arrow, ten with Shift, and supports Home, End, PageUp and PageDown', async () => {

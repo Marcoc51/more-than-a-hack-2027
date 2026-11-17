@@ -56,7 +56,8 @@ const check = (name, ok, detail = '') => (ok ? passes : failures).push(detail ? 
 
 const server = await preview({ root, preview: { port: 4179, strictPort: true, host: '127.0.0.1', open: false }, logLevel: 'silent' });
 const BASE = 'http://127.0.0.1:4179';
-const browser = await puppeteer.launch({ executablePath, headless: true, args: ['--no-first-run'] });
+const browser = await puppeteer.launch({ executablePath, headless: true, pipe: true,
+  args: ['--no-first-run', ...(process.env.CHROME_NO_SANDBOX === '1' ? ['--no-sandbox'] : [])] });
 
 async function open(label, width, height, { theme = 'dark', reducedMotion = false, path = '/explorer' } = {}) {
   // A fresh context per viewport: no theme choice or other storage carries over between runs.
@@ -71,6 +72,10 @@ async function open(label, width, height, { theme = 'dark', reducedMotion = fals
     { name: 'prefers-color-scheme', value: theme },
     { name: 'prefers-reduced-motion', value: reducedMotion ? 'reduce' : 'no-preference' },
   ]);
+  // Dark is the default whatever the OS scheme; a light run models a viewer's saved choice.
+  if (theme === 'light') {
+    await page.evaluateOnNewDocument(() => { if (!localStorage.getItem('maf-fc-theme')) localStorage.setItem('maf-fc-theme', 'light'); });
+  }
   await page.goto(BASE + path, { waitUntil: 'networkidle0' });
   await page.waitForSelector('h1');
   return page;
@@ -331,7 +336,7 @@ try {
     const page = await open('1440 methodology', 1440, 1000, { path: '/methodology' });
     const diagrams = await page.$$eval('.diagram svg[role="img"]', (els) => els.map((e) => e.getBoundingClientRect().width));
     check('methodology: three diagrams render', diagrams.length === 3 && diagrams.every((w) => w > 200), diagrams.join(','));
-    check('methodology: section chips present', (await page.$$eval('.section-chips a', (a) => a.length)) === 11);
+    check('methodology: all 11 section links present', (await page.$$eval('.section-nav-list a', (a) => a.length)) === 11);
     await page.close();
   }
   {
@@ -461,6 +466,19 @@ try {
     await page.click('.bar-theme .theme-toggle');
     await wait(400);
     check('1440: theme switch back to dark', (await bodyBg(page)) === 'rgb(15, 20, 25)');
+    {
+      // First visit with an OS light preference still opens dark; an explicit choice persists.
+      const context = await browser.createBrowserContext();
+      const p = await context.newPage();
+      await p.setViewport({ width: 1280, height: 800 });
+      await p.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }]);
+      await p.goto(BASE + '/', { waitUntil: 'networkidle0' });
+      check('first visit with OS light preference opens dark', (await bodyBg(p)) === 'rgb(15, 20, 25)' && (await p.evaluate(() => localStorage.getItem('maf-fc-theme'))) === null);
+      await p.click('.bar-theme .theme-toggle');
+      await p.reload({ waitUntil: 'networkidle0' });
+      check('explicit light choice persists across reload', (await p.evaluate(() => document.documentElement.dataset.theme)) === 'light');
+      await context.close();
+    }
 
     // Navigation keeps the scenario, focuses the new heading and supports browser history.
     await page.click('nav[aria-label="Main"] a[href^="/compare"]');
@@ -550,11 +568,11 @@ try {
     await page.close();
   }
 
-  // ---- 1280 laptop, OS light preference ---------------------------------------------
+  // ---- 1280 laptop, saved light preference ------------------------------------------
   {
     const page = await open('1280', 1280, 800, { theme: 'light' });
     await ready(page);
-    check('1280: follows the OS light preference', (await bodyBg(page)) === 'rgb(245, 247, 242)');
+    check('1280: a saved light preference is applied', (await bodyBg(page)) === 'rgb(245, 247, 242)');
     await page.close();
   }
 
@@ -611,6 +629,53 @@ try {
     const header = await page.$$eval('.app-bar > .app-bar-actions .btn', (bs) => bs.filter((b) => b.offsetParent !== null).map((b) => Math.round(b.getBoundingClientRect().height)));
     check('375: touch-sized header controls (>= 44 px)', header.every((h) => h >= 44), header.join(','));
     await page.close();
+  }
+  // ---- Methodology section navigation: no horizontal scrolling at any width -------------
+  for (const [width, height] of [[1440, 900], [1280, 800], [1024, 768], [768, 1024], [375, 812]]) {
+    for (const theme of ['dark', 'light']) {
+      const label = `${width} ${theme} methodology nav`;
+      const page = await open(label, width, height, { theme, path: '/methodology' });
+      const nav = await page.evaluate(() => {
+        const list = document.querySelector('.section-nav-list');
+        const select = document.querySelector('.section-nav-select');
+        const links = [...document.querySelectorAll('.section-nav-list a')];
+        const tops = [...new Set(links.map((a) => Math.round(a.getBoundingClientRect().top)))];
+        const shown = (e) => getComputedStyle(e).display !== 'none';
+        const navBox = document.querySelector('.section-nav').getBoundingClientRect();
+        return { listShown: shown(list), selectShown: shown(select), rows: tops.length, overflow: list.scrollWidth - list.clientWidth,
+          clipped: links.some((a) => shown(list) && (a.getBoundingClientRect().right > navBox.right + 1 || a.scrollWidth > a.clientWidth + 1)),
+          navHeight: Math.round(navBox.height) };
+      });
+      check(`${label}: no horizontal scroller or clipped pill`, nav.overflow <= 0 && !nav.clipped, JSON.stringify(nav));
+      if (width >= 1200) check(`${label}: two balanced rows`, nav.listShown && nav.rows === 2, JSON.stringify(nav));
+      else if (width >= 720) check(`${label}: wrapped pills, no selector`, nav.listShown && !nav.selectShown && nav.rows <= 4, JSON.stringify(nav));
+      else check(`${label}: compact section selector instead of pills`, !nav.listShown && nav.selectShown && nav.navHeight <= 90, JSON.stringify(nav));
+      if (theme === 'dark' && width === 1440) {
+        await page.screenshot({ path: join(OUT, 'methodology-nav-1440.png'), clip: { x: 0, y: 0, width, height: 520 } });
+        const current = async () => page.$eval('.section-nav-list a[aria-current="location"]', (a) => a.textContent).catch(() => null);
+        check(`${label}: first section highlighted on load`, (await current()) === 'Overview');
+        await page.evaluate(() => document.getElementById('h-parameters').scrollIntoView({ block: 'start' }));
+        await page.waitForFunction(() => document.querySelector('.section-nav-list a[aria-current="location"]')?.textContent === 'Parameters', { timeout: 3000 }).catch(() => {});
+        check(`${label}: highlight follows scrolling`, (await current()) === 'Parameters', String(await current()));
+        const headingTop = await page.$eval('#h-parameters', (h) => h.getBoundingClientRect().top);
+        const navBottom = await page.$eval('.section-nav', (n) => n.getBoundingClientRect().bottom);
+        check(`${label}: a jumped-to heading sits just below the sticky navigation`, headingTop >= navBottom - 1 && headingTop - navBottom <= 48, `${headingTop} vs ${navBottom}`);
+        await page.evaluate(() => document.querySelector('.section-nav-list a').blur());
+        await page.focus('.section-nav-list a');
+        await page.keyboard.press('Tab');
+        const ring = await page.evaluate(() => { const s = getComputedStyle(document.activeElement); return { inNav: !!document.activeElement.closest('.section-nav'), style: s.outlineStyle, width: s.outlineWidth }; });
+        check(`${label}: keyboard focus shows a visible ring`, ring.inNav && ring.style === 'solid' && ring.width === '2px', JSON.stringify(ring));
+      }
+      if (width === 375 && theme === 'dark') {
+        await page.screenshot({ path: join(OUT, 'methodology-nav-375.png'), clip: { x: 0, y: 0, width, height: 600 } });
+        await page.select('.section-nav-select select', 'limitations');
+        await page.waitForFunction(() => location.hash === '#h-limitations');
+        const top = await page.$eval('#h-limitations', (h) => h.getBoundingClientRect().top);
+        const navBottom = await page.$eval('.section-nav', (n) => n.getBoundingClientRect().bottom);
+        check(`${label}: selector jumps to the section just below the sticky bar`, top >= navBottom - 1 && top - navBottom <= 48, `${top} vs ${navBottom}`);
+      }
+      await page.close();
+    }
   }
 } finally {
   await browser.close();

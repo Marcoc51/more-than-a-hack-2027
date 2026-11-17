@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1720" height="1160" viewBox="0 0 1720 1160" role="img" aria-labelledby="title description">
+  <title id="title">Football Possession Intelligence Architecture</title>
+  <desc id="description">The competition pipeline parses tactical tracking and optional Smart Tagging with an unchanged rule-based engine, produces a competition CSV, and checks format and public evaluation. Separate bounded paths show optional IDSSE provider-agreement research, independently scripted synthetic public demonstrations, and owner-run local visualization exports. None of these paths trains or tunes the competition engine. The React Explorer displays predictions; it does not generate the competition CSV.</desc>
+  <defs>
+    <marker id="arrow-competition" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0 9 4.5 0 9Z" fill="#c3f400"/></marker>
+    <marker id="arrow-research" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0 9 4.5 0 9Z" fill="#b5a5e9"/></marker>
+    <marker id="arrow-demo" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0 9 4.5 0 9Z" fill="#5ab0ff"/></marker>
+    <marker id="arrow-local" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0 9 4.5 0 9Z" fill="#ffb020"/></marker>
+    <style>
+      text { font-family: Arial, Helvetica, sans-serif; fill: #ffffff; }
+      .title { font-size: 38px; font-weight: 700; letter-spacing: -1px; }
+      .subtitle { font-size: 20px; fill: #bac3cc; }
+      .section { font-size: 19px; font-weight: 700; letter-spacing: 1px; }
+      .heading { font-size: 24px; font-weight: 700; }
+      .body { font-size: 20px; }
+      .small { font-size: 18px; fill: #bac3cc; }
+      .mono { font-family: Consolas, monospace; font-size: 21px; font-weight: 700; }
+      .panel { fill: #141a20; stroke: #34414e; stroke-width: 1.5; }
+      .node { fill: #1a2129; stroke: #465461; stroke-width: 1.5; }
+      .competition { stroke: #c3f400; stroke-width: 2.5; fill: none; marker-end: url(#arrow-competition); }
+      .research { stroke: #b5a5e9; stroke-width: 2.5; stroke-dasharray: 8 5; fill: none; marker-end: url(#arrow-research); }
+      .demo { stroke: #5ab0ff; stroke-width: 2.5; stroke-dasharray: 2 5; fill: none; marker-end: url(#arrow-demo); }
+      .local { stroke: #ffb020; stroke-width: 2.5; stroke-dasharray: 10 4 2 4; fill: none; marker-end: url(#arrow-local); }
+    </style>
+  </defs>
+
+  <rect width="1720" height="1160" fill="#0f1419"/>
+  <rect x="40" y="40" width="6" height="66" rx="3" fill="#c3f400"/>
+  <text x="64" y="69" class="title">Football Possession Intelligence Architecture</text>
+  <text x="64" y="103" class="subtitle">Deterministic inference. Separate evaluation and visualization paths. One shared React Explorer.</text>
+
+  <rect x="40" y="140" width="1640" height="402" rx="22" class="panel"/>
+  <text x="64" y="179" class="section" style="fill:#c3f400">01  COMPETITION INFERENCE</text>
+  <text x="1560" y="179" text-anchor="end" class="small">Owner-run on authorized competition inputs</text>
+
+  <rect x="64" y="210" width="300" height="270" rx="14" class="node"/>
+  <text x="88" y="249" class="heading">Inputs</text>
+  <text x="88" y="292" class="body">Tactical tracking</text>
+  <text x="88" y="327" class="body">Player / ball coordinates</text>
+  <text x="88" y="362" class="body">Team metadata</text>
+  <text x="88" y="397" class="body">Optional Smart Tagging</text>
+  <text x="88" y="452" class="small">No ground-truth input</text>
+
+  <path d="M364 288H404" class="competition"/>
+  <rect x="420" y="210" width="490" height="270" rx="14" fill="#202a25" stroke="#c3f400" stroke-width="1.5"/>
+  <text x="444" y="249" class="heading">Rule-Based Possession Engine</text>
+  <text x="444" y="292" class="body">Data parsing and frame alignment</text>
+  <text x="444" y="327" class="body">Spatial control evidence</text>
+  <text x="444" y="362" class="body">Temporal confirmation and hysteresis</text>
+  <text x="444" y="397" class="body">Dead-ball and restart detection</text>
+  <text x="444" y="452" class="mono" style="fill:#c3f400">H / A / D / X prediction generation</text>
+
+  <path d="M910 288H954" class="competition"/>
+  <rect x="970" y="210" width="300" height="130" rx="14" class="node"/>
+  <text x="994" y="250" class="heading">Competition CSV</text>
+  <text x="994" y="288" class="mono">frame,label</text>
+  <text x="994" y="318" class="small">Existing submission unchanged</text>
+
+  <path d="M1270 288H1314" class="competition"/>
+  <rect x="1330" y="210" width="326" height="270" rx="14" class="node"/>
+  <text x="1354" y="249" class="heading">Validation</text>
+  <text x="1354" y="292" class="body">Submission format checks</text>
+  <text x="1354" y="327" class="body">Official scorer /</text>
+  <text x="1354" y="354" class="body">public-window evaluation</text>
+  <text x="1354" y="397" class="body">Synthetic regression tests</text>
+  <text x="1354" y="452" class="small">Evaluation does not tune rules</text>
+
+  <path d="M910 424H954" class="competition"/>
+  <rect x="970" y="370" width="300" height="110" rx="14" class="node"/>
+  <text x="994" y="410" class="body" style="font-weight:700">Technical documentation</text>
+  <text x="994" y="447" class="small">Method, limits and reproduction</text>
+  <text x="64" y="517" class="small">The Explorer is a viewer of exported predictions; it is outside competition CSV generation.</text>
+
+  <rect x="40" y="578" width="520" height="462" rx="22" class="panel"/>
+  <text x="64" y="616" class="section" style="fill:#b5a5e9">02  OPTIONAL EXTERNAL RESEARCH</text>
+  <rect x="64" y="642" width="472" height="90" rx="14" class="node"/>
+  <text x="88" y="677" class="heading">IDSSE external tracking</text>
+  <text x="88" y="708" class="small">Acquired separately; no training or rule tuning</text>
+  <path d="M300 732V758" class="research"/>
+  <rect x="64" y="774" width="472" height="90" rx="14" class="node"/>
+  <text x="88" y="809" class="body">Unchanged engine + baseline comparisons</text>
+  <text x="88" y="840" class="small">Provider labels excluded from inference inputs</text>
+  <path d="M300 864V890" class="research"/>
+  <rect x="64" y="906" width="472" height="104" rx="14" class="node"/>
+  <text x="88" y="941" class="heading">Provider-agreement benchmark</text>
+  <text x="88" y="975" class="small">Against DFL annotations; not a competition score</text>
+
+  <rect x="600" y="578" width="520" height="462" rx="22" class="panel"/>
+  <text x="624" y="616" class="section" style="fill:#5ab0ff">03  PUBLIC SYNTHETIC DEMO</text>
+  <rect x="624" y="642" width="472" height="90" rx="14" class="node"/>
+  <text x="648" y="677" class="heading">Four project-authored scripts</text>
+  <text x="648" y="708" class="small">Synthetic tracking + scripted reference labels</text>
+  <path d="M860 732V758" class="demo"/>
+  <rect x="624" y="774" width="472" height="90" rx="14" class="node"/>
+  <text x="648" y="809" class="body">Unchanged Python engine + smooth50</text>
+  <text x="648" y="840" class="small">Synthetic predictions and reference metrics</text>
+  <path d="M860 864V890" class="demo"/>
+  <rect x="624" y="906" width="472" height="104" rx="14" class="node"/>
+  <text x="648" y="941" class="heading">Public React Explorer</text>
+  <text x="648" y="975" class="small">Tracked synthetic exports only; static default build</text>
+
+  <rect x="1160" y="578" width="520" height="462" rx="22" fill="#1c1b18" stroke="#8d6b32" stroke-width="1.5"/>
+  <text x="1184" y="616" class="section" style="fill:#ffb020">04  LOCAL-ONLY VISUALIZATION</text>
+  <rect x="1184" y="642" width="472" height="90" rx="14" class="node"/>
+  <text x="1208" y="677" class="heading">Owner-authorized local files</text>
+  <text x="1208" y="708" class="small">Tracking + existing prediction CSV; no ground truth</text>
+  <path d="M1420 732V758" class="local"/>
+  <rect x="1184" y="774" width="472" height="90" rx="14" class="node"/>
+  <text x="1208" y="809" class="body">Bounded local export adapter</text>
+  <text x="1208" y="840" class="small">Git-ignored JSON; no inference or CSV changes</text>
+  <path d="M1420 864V890" class="local"/>
+  <rect x="1184" y="906" width="472" height="104" rx="14" class="node"/>
+  <text x="1208" y="941" class="heading">Local private Explorer</text>
+  <text x="1208" y="975" class="small">Browser file picker; same views; never deployed</text>
+
+  <text x="64" y="1079" class="subtitle">No training occurs in these paths. External research and visualizations do not modify the competition engine.</text>
+  <path d="M64 1120H100" class="competition"/><text x="116" y="1126" class="small">Competition inference</text>
+  <path d="M427 1120H463" class="research"/><text x="479" y="1126" class="small">External research</text>
+  <path d="M778 1120H814" class="demo"/><text x="830" y="1126" class="small">Synthetic examples</text>
+  <path d="M1158 1120H1194" class="local"/><text x="1210" y="1126" class="small">Local files only</text>
+</svg>

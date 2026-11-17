@@ -9,7 +9,7 @@ export function LabelChip({ label, title }: { label: Label; title?: string }) {
   );
 }
 
-export function Legend({ variant = 'explorer' }: { variant?: 'explorer' | 'compare' }) {
+export function Legend({ variant = 'explorer', evidence = true }: { variant?: 'explorer' | 'compare'; evidence?: boolean }) {
   return (
     <div className="legend" role="group" aria-label="Legend">
       <ul className="legend-list">
@@ -17,7 +17,7 @@ export function Legend({ variant = 'explorer' }: { variant?: 'explorer' | 'compa
           <li key={l}><LabelChip label={l} /> <span>{LABELS[l].name}</span></li>
         ))}
       </ul>
-      {variant === 'explorer' ? (
+      {evidence && (variant === 'explorer' ? (
         <ul className="legend-list legend-secondary">
           <li><span className="legend-swatch seg-ev-home" aria-hidden="true" /> Home control</li>
           <li><span className="legend-swatch seg-ev-away" aria-hidden="true" /> Away control</li>
@@ -30,7 +30,7 @@ export function Legend({ variant = 'explorer' }: { variant?: 'explorer' | 'compa
           <li><span className="legend-swatch seg-diff-differ" aria-hidden="true" /> Differs from the reference</li>
           <li><span className="legend-swatch seg-diff-ungraded" aria-hidden="true" /> Not graded (reference X)</li>
         </ul>
-      )}
+      ))}
     </div>
   );
 }

@@ -5,10 +5,12 @@ import type { Scenario } from '../scenario/types';
 import { usePlayback, usePlaybackDispatch } from '../playback/PlaybackProvider';
 import { clampFrame } from '../playback/reducer';
 
-type TrackKind = 'label' | 'evidence' | 'ball' | 'diff';
+/** label: H/A/D/X · evidence: engine control codes · ball: t/n · diff: vs a reference ·
+ *  pair: two predictions agree (=) or differ (!), with no reference involved. */
+export type TrackKind = 'label' | 'evidence' | 'ball' | 'diff' | 'pair';
 export type TimelineVariant = 'explorer' | 'compare' | 'mini';
 
-interface Track {
+export interface Track {
   id: string;
   name: string;
   origin: string;
@@ -21,6 +23,7 @@ const VALUE_NAMES: Readonly<Record<TrackKind, Readonly<Record<string, string>>>>
   evidence: { H: 'Home control', A: 'Away control', '.': 'No credible control', _: 'Ball not tracked' },
   ball: { t: 'Ball tracked', n: 'Ball not tracked' },
   diff: { u: 'Not graded (reference X)', '=': 'Agrees with the reference', '!': 'Differs from the reference' },
+  pair: { '=': 'Predictions agree', '!': 'Predictions differ' },
 };
 
 function diffValues(scenario: Scenario, labels: string): string {
@@ -29,7 +32,7 @@ function diffValues(scenario: Scenario, labels: string): string {
   return mask.map((g, f) => (!g ? 'u' : labels[f] === ref[f] ? '=' : '!')).join('');
 }
 
-interface TrackGroup {
+export interface TrackGroup {
   title: string | null;
   tracks: Track[];
 }
@@ -48,7 +51,7 @@ function groupsFor(scenario: Scenario, variant: TimelineVariant): TrackGroup[] {
     const groups: TrackGroup[] = [{ title: 'Possession', tracks: possession }];
     if (scenario.reference) {
       groups.push({ title: 'Differences from the reference', tracks: [
-        { id: 'diff-phase3b', name: 'Phase 3B vs reference', origin: 'computed here', kind: 'diff', values: diffValues(scenario, phase3b.labels) },
+        { id: 'diff-phase3b', name: 'Possession Engine vs reference', origin: 'computed here', kind: 'diff', values: diffValues(scenario, phase3b.labels) },
         { id: 'diff-smooth50', name: 'smooth50 vs reference', origin: 'computed here', kind: 'diff', values: diffValues(scenario, smooth50.labels) },
       ] });
     }
@@ -57,7 +60,7 @@ function groupsFor(scenario: Scenario, variant: TimelineVariant): TrackGroup[] {
   return [
     { title: 'Possession', tracks: possession },
     { title: 'Evidence and annotations', tracks: [
-      { id: 'evidence', name: 'Control evidence', origin: 'Phase 3B output', kind: 'evidence', values: phase3b.evidence },
+      { id: 'evidence', name: 'Control evidence', origin: 'Possession Engine output', kind: 'evidence', values: phase3b.evidence },
       { id: 'ball', name: 'Ball tracking', origin: 'synthetic observation', kind: 'ball', values: scenario.frames.map((f) => (f.ball ? 't' : 'n')).join('') },
     ] },
   ];
@@ -67,6 +70,7 @@ function segmentClass(kind: TrackKind, value: string): string {
   if (kind === 'label') return `seg seg-${value}`;
   if (kind === 'evidence') return `seg seg-ev-${{ H: 'home', A: 'away', '.': 'none', _: 'noball' }[value] ?? 'none'}`;
   if (kind === 'diff') return `seg seg-diff-${{ u: 'ungraded', '=': 'agree', '!': 'differ' }[value] ?? 'ungraded'}`;
+  if (kind === 'pair') return `seg seg-diff-${value === '!' ? 'differ' : 'agree'}`;
   return `seg seg-ball-${value === 't' ? 'yes' : 'no'}`;
 }
 
@@ -99,10 +103,39 @@ interface TimelineProps {
 }
 
 export function Timeline({ scenario, variant = 'explorer', children }: TimelineProps) {
+  const groups = useMemo(() => groupsFor(scenario, variant), [scenario, variant]);
+  const events = useMemo(() => scenario.events.map((ev) => ({ key: `${ev.type}-${ev.frame}`, frame: ev.frame, title: `${ev.type} · frame ${ev.frame}` })), [scenario]);
+  const valueText = (frame: number, last: number) => {
+    const p3 = labelAt(scenario.models.phase3b.labels, frame);
+    const base = labelAt(scenario.models.smooth50.labels, frame);
+    return `Frame ${frame} of ${last}, ${frameTime(frame, scenario.fps)}. ` +
+      `${scenario.models.phase3b.name}: ${LABELS[p3].name}. ${scenario.models.smooth50.name}: ${LABELS[base].name}.`;
+  };
+  return <TrackTimeline groups={groups} variant={variant} events={variant === 'mini' ? null : events} valueText={valueText}>{children}</TrackTimeline>;
+}
+
+export interface TimelineMark {
+  key: string;
+  frame: number;
+  title: string;
+}
+
+interface TrackTimelineProps {
+  groups: TrackGroup[];
+  variant?: TimelineVariant;
+  /** Marks on an "Events" row; null hides the row. */
+  events: readonly TimelineMark[] | null;
+  /** Spoken position of the slider. */
+  valueText: (frame: number, last: number) => string;
+  children?: ReactNode;
+}
+
+/** The shared track timeline: grouped bars, click and keyboard seeking (WAI-ARIA slider) and
+ *  the playhead, driven by the surrounding PlaybackProvider. */
+export function TrackTimeline({ groups, variant = 'explorer', events, valueText: describe, children }: TrackTimelineProps) {
   const { frame, frameCount } = usePlayback();
   const dispatch = usePlaybackDispatch();
-  const groups = useMemo(() => groupsFor(scenario, variant), [scenario, variant]);
-  const showEvents = variant !== 'mini';
+  const showEvents = events !== null;
   const n = frameCount;
 
   const sliderRef = useRef<HTMLDivElement>(null);
@@ -130,10 +163,7 @@ export function Timeline({ scenario, variant = 'explorer', children }: TimelineP
     dispatch({ type: 'seek', frame: clampFrame(next, n) });
   };
 
-  const p3 = labelAt(scenario.models.phase3b.labels, frame);
-  const base = labelAt(scenario.models.smooth50.labels, frame);
-  const valueText = `Frame ${frame} of ${last}, ${frameTime(frame, scenario.fps)}. ` +
-    `${scenario.models.phase3b.name}: ${LABELS[p3].name}. ${scenario.models.smooth50.name}: ${LABELS[base].name}.`;
+  const valueText = describe(frame, last);
 
   return (
     <section className={`timeline timeline-${variant}`} aria-label="Possession timelines">
@@ -162,8 +192,8 @@ export function Timeline({ scenario, variant = 'explorer', children }: TimelineP
           ))}
           {showEvents && (
             <div className="tl-events" aria-hidden="true">
-              {scenario.events.map((ev) => (
-                <span key={`${ev.type}-${ev.frame}`} className="tl-event" style={{ left: `${((ev.frame + 0.5) / n) * 100}%` }} title={`${ev.type} · frame ${ev.frame}`} />
+              {events.map((ev) => (
+                <span key={ev.key} className="tl-event" style={{ left: `${((ev.frame + 0.5) / n) * 100}%` }} title={ev.title} />
               ))}
             </div>
           )}

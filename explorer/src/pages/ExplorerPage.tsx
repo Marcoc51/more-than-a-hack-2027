@@ -60,8 +60,8 @@ export function ExplorerPage() {
   return (
     <div className="page">
       <PageHeading title="Explorer" synthetic>
-        Frame-by-frame possession (H home, A away, D dead ball, X no answer) from the MAF FC Phase 3B
-        engine and the official smooth50 baseline, both run unchanged on synthetic tracking.
+        Frame-by-frame possession (H home, A away, D dead ball, X no answer) from the Rule-Based Possession Engine
+        and the official smooth50 baseline, both run unchanged on synthetic tracking.
       </PageHeading>
       <ScenarioPanel entries={SCENARIO_ENTRIES} activeId={id} onSelect={select}
         scenario={state.status === 'ready' ? state.scenario : null} />

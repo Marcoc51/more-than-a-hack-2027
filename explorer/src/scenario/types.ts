@@ -2,7 +2,7 @@
 
 export type Label = 'H' | 'A' | 'D' | 'X';
 export type TeamSide = 'home' | 'away';
-/** Per-frame Phase 3B control evidence: H/A = that team has credible control,
+/** Per-frame Possession Engine control evidence: H/A = that team has credible control,
  *  '.' = ball tracked but no credible control, '_' = ball not tracked. */
 export type EvidenceCode = 'H' | 'A' | '.' | '_';
 
@@ -72,7 +72,7 @@ export interface Restart {
   team: TeamSide | 'unknown';
 }
 
-/** MAF FC Phase 3B output: labels plus the engine's own per-frame evidence. */
+/** Rule-Based Possession Engine output: labels plus the engine's own per-frame evidence. */
 export interface Phase3bOutput {
   name: string;
   producer: string;

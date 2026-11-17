@@ -55,7 +55,7 @@ export function Inspector({ scenario }: { scenario: Scenario }) {
         </section>
 
         <section className="insp-section" aria-labelledby="insp-evidence-heading">
-          <h2 id="insp-evidence-heading" className="eyebrow"><Icon icon={Radar} /> Evidence <span className="origin">Phase 3B output</span></h2>
+          <h2 id="insp-evidence-heading" className="eyebrow"><Icon icon={Radar} /> Evidence <span className="origin">Possession Engine output</span></h2>
           {reasonName === undefined ? (
             <p className="empty">No engine evidence for this frame.</p>
           ) : (
@@ -90,14 +90,14 @@ export function Inspector({ scenario }: { scenario: Scenario }) {
         <summary><Icon icon={Cpu} /> Engine details <Icon icon={ChevronDown} className="disclosure-chevron" /></summary>
         <div className="disclosure-body">
           <dl className="insp-kv">
-            <div><dt>Phase 3B state source</dt><dd><code>{reasonName ?? 'n/a'}</code>{restart ? <> · restart ({restart.team})</> : null}</dd></div>
-            <div><dt>Phase 3B control code</dt><dd><code>{evidence ?? 'n/a'}</code></dd></div>
+            <div><dt>Possession Engine state source</dt><dd><code>{reasonName ?? 'n/a'}</code>{restart ? <> · restart ({restart.team})</> : null}</dd></div>
+            <div><dt>Possession Engine control code</dt><dd><code>{evidence ?? 'n/a'}</code></dd></div>
             <div>
               <dt>Baseline nearest team <span className="origin">smooth50 output</span></dt>
               <dd><code>{nearest === '-' ? 'none (no ball)' : nearest === 'H' ? 'home' : 'away'}</code></dd>
             </div>
           </dl>
-          <p className="insp-text muted">The state source is the code the Phase 3B state machine records for this frame; the baseline value is the nearest team before smooth50&apos;s ±50-frame vote.</p>
+          <p className="insp-text muted">The state source is the code the Possession Engine state machine records for this frame; the baseline value is the nearest team before smooth50&apos;s ±50-frame vote.</p>
         </div>
       </details>
     </aside>

@@ -77,7 +77,7 @@ export interface Disagreement {
   models: ModelId[];
 }
 
-/** Maximal scored runs in which the (reference, Phase 3B, smooth50) labels are constant and at
+/** Maximal scored runs in which the (reference, Possession Engine, smooth50) labels are constant and at
  *  least one model differs from the reference. Never spans an unscored (reference X) frame. */
 export function disagreements(scenario: Scenario): Disagreement[] {
   const mask = scoredMask(scenario);
@@ -141,7 +141,7 @@ export interface Summary {
   agreement: string;
   /** Which model scores higher on the official synthetic spellF1 (or that they tie). */
   spells: string;
-  /** Phase 3B's longest difference from the reference, or that there is none. */
+  /** Possession Engine's longest difference from the reference, or that there is none. */
   difference: string;
 }
 
@@ -158,12 +158,12 @@ export function summarize(scenario: Scenario): Summary {
     .filter((d) => d.models.includes('phase3b'))
     .sort((a, b) => (b.end - b.start) - (a.end - a.start) || a.start - b.start)[0];
   return {
-    agreement: `Phase 3B matches the script on ${a3.agree} of ${a3.graded} graded frames (${percent(a3.rate)}); smooth50 on ${as.agree} (${percent(as.rate)}).`,
+    agreement: `Possession Engine matches the script on ${a3.agree} of ${a3.graded} graded frames (${percent(a3.rate)}); smooth50 on ${as.agree} (${percent(as.rate)}).`,
     spells: s3 === ss
       ? `Both score ${s3.toFixed(3)} on the official synthetic spellF1.`
-      : `On the official synthetic spellF1, ${s3 > ss ? 'Phase 3B' : 'smooth50'} scores higher (${Math.max(s3, ss).toFixed(3)} vs ${Math.min(s3, ss).toFixed(3)}).`,
+      : `On the official synthetic spellF1, ${s3 > ss ? 'Possession Engine' : 'smooth50'} scores higher (${Math.max(s3, ss).toFixed(3)} vs ${Math.min(s3, ss).toFixed(3)}).`,
     difference: longest
-      ? `Phase 3B's longest difference is frames ${longest.start}–${longest.end - 1}: reference ${longest.reference}, Phase 3B ${longest.phase3b}.`
-      : 'Phase 3B agrees with the script on every graded frame.',
+      ? `Possession Engine's longest difference is frames ${longest.start}–${longest.end - 1}: reference ${longest.reference}, Possession Engine ${longest.phase3b}.`
+      : 'Possession Engine agrees with the script on every graded frame.',
   };
 }

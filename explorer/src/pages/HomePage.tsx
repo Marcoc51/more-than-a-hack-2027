@@ -42,7 +42,7 @@ function MiniExplorer() {
 
 const ENTRIES: readonly { to: string; title: string; text: string; icon: LucideIcon; action: string }[] = [
   { to: '/explorer', title: 'Explorer', text: 'Play four synthetic scenarios frame by frame and see the evidence behind each label.', icon: Activity, action: 'Open the Explorer' },
-  { to: '/compare', title: 'Compare', text: 'Phase 3B and the official smooth50 baseline against each scenario’s script, scored with the organisers’ code.', icon: GitCompareArrows, action: 'Compare the models' },
+  { to: '/compare', title: 'Compare', text: 'Possession Engine and the official smooth50 baseline against each scenario’s script, scored with the organisers’ code.', icon: GitCompareArrows, action: 'Compare the models' },
   { to: '/methodology', title: 'Methodology', text: 'The five stages, nine fixed parameters and known limitations, with diagrams.', icon: BookOpen, action: 'Read the method' },
 ];
 
@@ -104,7 +104,7 @@ export function HomePage() {
           <h2 id="facts-heading" className="sr-only">Facts about the method and the app</h2>
           <dl className="fact-grid">
             <div><dt>synthetic scenarios, each scripted in code</dt><dd>{SCENARIO_ENTRIES.length}</dd></div>
-            <div><dt>models run on identical inputs: Phase 3B and smooth50</dt><dd>2</dd></div>
+            <div><dt>models run on identical inputs: Possession Engine and smooth50</dt><dd>2</dd></div>
             <div><dt>match labels used for training or tuning</dt><dd>0</dd></div>
             <div><dt>parameters, all fixed in advance</dt><dd>9</dd></div>
           </dl>

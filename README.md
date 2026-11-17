@@ -11,14 +11,16 @@ overlap), with frame-level `macroF1` as the tie-break.
 
 ## Our solution
 
-**Frozen Phase 3B**, implemented in [`src/possession.py`](src/possession.py), is deterministic
+The **Rule-Based Possession Engine**, implemented in [`src/possession.py`](src/possession.py), is deterministic
 and rule-based: no machine learning or external training data. Automatic tactical tracking
 provides player-to-ball proximity and relative team-control evidence. Temporal confirmation
 and hysteresis hold possession through loose balls; dead-ball and restart evidence can end
 or start it. Optional Smart Tagging set pieces support restarts. Missing tracking is handled
 explicitly, and each half has independent possession state.
 
-Parameters and limitations: [technical document](docs/TECHNICAL_DOCUMENT.md).
+The submission was developed as the internal Phase 3B implementation; this public naming
+change does not alter its algorithm or parameters. Parameters and limitations:
+[technical document](docs/TECHNICAL_DOCUMENT.md). [Architecture diagram](docs/assets/possession-architecture.svg).
 
 ## Inputs and output
 
@@ -60,26 +62,27 @@ Dependencies are pinned in [requirements.txt](requirements.txt). Identical input
 produce identical bytes. Node, the Explorer, external benchmark data and an official scorer
 checkout are unnecessary for prediction generation.
 
-`outputs/submission.csv` is the reproduction destination. The owner's already-validated private
-file is `outputs/submission/MAF FC.csv`. Keep real inputs and all match-derived outputs outside Git.
+`outputs/submission.csv` is the recommended reproduction destination.
+Keep real inputs and all match-derived outputs outside Git.
 
 ## PUBLIC five-minute evaluation
 
 | Method | spellF1 | macroF1 |
 |---|---:|---:|
-| MAF FC frozen Phase 3B | **0.400000** | **0.597742** |
+| Rule-Based Possession Engine | **0.400000** | **0.597742** |
 | Official smooth125 baseline | 0.4242 | 0.5812 |
 | Official smooth50 baseline | 0.3256 | 0.6207 |
 
 MAF FC was independently measured **after freezing the algorithm**, using the organisers'
 unmodified scorer at commit `f8f2629ff1e0985f81d7e59d8413678514ee1530`.
 The public sample has **7,500 graded frames and only 17 ground-truth possession spells**.
+With so few possession spells, generalization to the private full match is uncertain.
 Public ground truth was not used to train, tune or select the submission algorithm.
 These are public-window results, not private full-match scores or a prediction of final ranking.
 
 ## Optional external IDSSE benchmark
 
-On one external match, MAF FC scored spellF1 **0.3921** / macroF1 **0.6333**;
+The Rule-Based Possession Engine scored spellF1 **0.3921** / macroF1 **0.6333** on one external match;
 smooth50 scored **0.3011** / **0.3849**. This measures **single-match provider-annotation
 agreement**, not competition scoring or independently verified possession accuracy.
 Neither IDSSE nor SkillCorner data trained or modified the competition algorithm.
@@ -87,9 +90,18 @@ See the [existing IDSSE report](docs/IDSSE_BENCHMARK_E1D_B.md).
 
 ## Optional React Explorer
 
-The [Explorer](explorer/README.md) interactively visualises and compares **four synthetic
-scenarios**. It contains no restricted match data, match videos, actual competition predictions
-or private labels. It is separate from scored CSV generation.
+The [Explorer](explorer/README.md) is one React application with two modes, neither part of
+competition CSV generation:
+
+- **Public (default build):** only **four independently authored synthetic scenarios**. It
+  compares unchanged Python predictions with scripted reference labels; those metrics are
+  demonstrations, not competition accuracy.
+- **Local (`npm run dev:local`, this computer only, never deployed):** opens the owner's
+  registered actual-match export by default. It compares the Rule-Based Possession Engine with
+  smooth50 on the same real frames. That is prediction-to-prediction agreement: with no
+  reference labels it measures no accuracy.
+
+See [modes, setup and what comparisons can establish](explorer/README.md#operating-modes).
 
 ## Tests and validation
 
@@ -118,7 +130,7 @@ and browser smoke tests.
 | `src/` | Submission engine, Smart Tagging reader, baseline and format checker |
 | `tests/`, `tools/` | Synthetic tests, scenario exporter and vendored scorer |
 | `benchmark/` | Optional external adapters and benchmark tools |
-| `explorer/` | Optional synthetic React viewer |
+| `explorer/` | Public synthetic demo and local-only Explorer for authorized data exports |
 | `docs/` | Technical document and research reports at their existing paths |
 | [docs/archive/](docs/archive/) | Design explorations and historical integration manifest; recorded paths retained |
 

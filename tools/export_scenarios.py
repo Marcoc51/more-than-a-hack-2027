@@ -7,7 +7,7 @@ Every scenario is scripted here, in code, from scratch: no match data is read. E
 written to temporary files in the same raw ATD / metadata / Smart Tagging formats that the
 synthetic tests use, and the UNCHANGED engines are run on those files:
 
-  * MAF FC Phase 3B: possession.build_labels (with the default parameters);
+  * Rule-Based Possession Engine: possession.build_labels (with the default parameters);
   * official smooth50: baseline.build_labels (the reproduction of the organisers' baseline).
 
 The per-frame evidence and reason codes come from the same public functions that
@@ -41,7 +41,7 @@ import possession  # noqa: E402  (unchanged Phase 3B engine)
 import possession_metrics  # noqa: E402  (organisers' public scorer, vendored unchanged)
 import smart_tagging  # noqa: E402
 
-GENERATOR_VERSION = "2.0.0"
+GENERATOR_VERSION = "2.0.1"  # Public display-name update only; inference is unchanged.
 OUT_DIR = os.path.join(ROOT, "explorer", "src", "scenario", "generated")
 ENGINE_FILES = ("src/possession.py", "src/baseline.py", "src/smart_tagging.py")
 SCORER_FILE = "tools/vendor/possession_metrics.py"
@@ -572,7 +572,7 @@ def export(spec):
                       "description": "Written down from the scenario script, not produced by any model."},
         "models": {
             "phase3b": {
-                "name": "MAF FC Phase 3B", "producer": "src/possession.py build_labels (default parameters)",
+                "name": "Rule-Based Possession Engine", "producer": "src/possession.py build_labels (default parameters)",
                 "labels": out["phase3b"],
                 "evidence": out["evidence"],
                 "reasons": out["reasons"],

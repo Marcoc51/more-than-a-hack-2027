@@ -1,31 +1,19 @@
-import { defineConfig, type Plugin } from 'vitest/config';
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import { root, approvedAssets, publicBoundary } from './scripts/privacy-plugin.mjs';
+import { localExportServer } from './scripts/local-export-server.mjs';
 
-/** Static hosts without rewrite rules (e.g. GitHub Pages) serve 404.html for unknown paths.
- *  A copy of index.html there lets deep links such as /compare load the app, which then routes. */
-function spaFallback(): Plugin {
+export default defineConfig(({ command, mode }) => {
+  const local = mode === 'local-explorer';
+  if (local && command !== 'serve') throw new Error('Local Explorer is development-only. Private-mode builds are prohibited. Use npm run dev:local on localhost.');
+  // The loopback-only local export loader exists only in the local development server.
+  const localPlugins = local && command === 'serve' ? [localExportServer()] : [];
   return {
-    name: 'maf-spa-fallback',
-    apply: 'build',
-    enforce: 'post', // after Vite has emitted index.html into the bundle
-    generateBundle(_options, bundle) {
-      const index = bundle['index.html'];
-      if (index && index.type === 'asset') {
-        this.emitFile({ type: 'asset', fileName: '404.html', source: index.source });
-      }
-    },
+    root, plugins: [react(), approvedAssets(), publicBoundary(), ...localPlugins], publicDir: false,
+    build: { assetsInlineLimit: 0 },
+    define: { __LOCAL_EXPLORER__: JSON.stringify(local) },
+    server: { host: '127.0.0.1', fs: { strict: true, allow: [root] } },
+    preview: { host: '127.0.0.1' }, base: '/',
+    test: { environment: 'jsdom', globals: true, setupFiles: ['./src/test/setup.ts'], css: false },
   };
-}
-
-export default defineConfig({
-  plugins: [react(), spaFallback()],
-  // Absolute asset URLs, so nested routes resolve them. Deploying under a sub-path:
-  // `npm run build -- --base=/repository-name/` (the router reads the same base).
-  base: '/',
-  test: {
-    environment: 'jsdom',
-    globals: true,
-    setupFiles: ['./src/test/setup.ts'],
-    css: false,
-  },
 });

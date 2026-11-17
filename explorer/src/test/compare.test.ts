@@ -83,7 +83,7 @@ describe('comparison metrics on the exported scenarios', () => {
     }
   });
 
-  it('S1: Phase 3B matches the reference on every graded frame', () => {
+  it('S1: Possession Engine matches the reference on every graded frame', () => {
     expect(disagreements(S1).every((d) => !d.models.includes('phase3b'))).toBe(true);
   });
 });
@@ -95,7 +95,7 @@ describe('interpretation text states facts computed from the data', () => {
     expect(interpret(S2).observations).toContain(`${longestRun(S2.models.phase3b.evidence, 'A', contest[0], contest[1])} consecutive frames`);
   });
 
-  it('S3: smooth50 flips at the gap midpoint, Phase 3B when tracking resumes', () => {
+  it('S3: smooth50 flips at the gap midpoint, Possession Engine when tracking resumes', () => {
     const gap = S3.events.find((e) => e.type === 'tracking-lost')!.interval!;
     expect(firstFrame(S3.models.smooth50.labels, 'A')).toBe((gap[0] + gap[1]) / 2);
     expect(firstFrame(S3.models.phase3b.labels, 'A')).toBe(gap[1]);

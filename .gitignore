@@ -15,6 +15,11 @@ outputs/
 evaluation/reports/
 scoreboard.csv
 
+# Owner-only Explorer exports; never served by Vite or imported into the public build.
+.local-explorer/
+# Local implementation verification artifacts (synthetic fixtures and reports only).
+.p1-qa/
+
 # -- Python, environments, caches, logs ---------------------------------------------------------
 __pycache__/
 *.py[cod]

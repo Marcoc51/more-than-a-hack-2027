@@ -167,6 +167,23 @@ describe('Methodology page', () => {
     expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual(links.map((l) => l.textContent));
   });
 
+  it('offers two-row section links and a compact selector that highlight the current section', async () => {
+    renderApp('/methodology');
+    await screen.findByRole('heading', { level: 1, name: 'Methodology' });
+    const toc = screen.getByRole('navigation', { name: 'On this page' });
+    const links = within(toc).getAllByRole('link');
+    expect(links[0]).toHaveAttribute('aria-current', 'location');
+    expect(links.filter((l) => l.hasAttribute('aria-current'))).toHaveLength(1);
+    const select = within(toc).getByRole('combobox', { name: 'Jump to section' });
+    expect(within(select).getAllByRole('option').map((o) => o.textContent)).toEqual(links.map((l) => l.textContent));
+    fireEvent.change(select, { target: { value: 'parameters' } });
+    expect(within(toc).getByRole('link', { name: 'Parameters' })).toHaveAttribute('aria-current', 'location');
+    expect(links[0]).not.toHaveAttribute('aria-current');
+    expect(window.location.hash).toBe('#h-parameters');
+    fireEvent.click(within(toc).getByRole('link', { name: 'Known limitations' }));
+    expect(within(toc).getByRole('link', { name: 'Known limitations' })).toHaveAttribute('aria-current', 'location');
+  });
+
   it('states the engine parameters as implemented and links public source files', async () => {
     renderApp('/methodology');
     await screen.findByRole('heading', { level: 1, name: 'Methodology' });
@@ -177,6 +194,6 @@ describe('Methodology page', () => {
     for (const a of screen.getAllByRole('link').filter((l) => l.getAttribute('href')?.includes('/blob/'))) {
       expect(a.getAttribute('href')).toMatch(/blob\/main\/(src\/(possession|baseline|smart_tagging)\.py|docs\/TECHNICAL_DOCUMENT\.md)$/);
     }
-    expect(screen.getByText(/We make no claim about our competition score/)).toBeInTheDocument();
+    expect(screen.getByText(/spellF1 0.400000 and macroF1 0.597742/)).toHaveTextContent("not a private full-match score");
   });
 });

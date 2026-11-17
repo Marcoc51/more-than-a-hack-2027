@@ -2,6 +2,14 @@ import { useId, useMemo } from 'react';
 import type { Scenario, XY } from '../scenario/types';
 import { usePlayback } from '../playback/PlaybackProvider';
 
+/** The pitch needs positions only (never the ball's speed), so local exports, whose ball speed may
+ *  be unknown, share this view without synthetic scores. */
+export interface PitchFrame {
+  ball: readonly [number, number, ...unknown[]] | null;
+  players: ReadonlyArray<XY | null>;
+}
+export type PitchScenario = Pick<Scenario, 'title' | 'pitch' | 'teams' | 'players'> & { frames: readonly PitchFrame[] };
+
 const SPOT = 11;
 const BOX_DEPTH = 16.5;
 const BOX_WIDTH = 40.32;
@@ -39,7 +47,7 @@ function Markings({ length: L, width: W }: { length: number; width: number }) {
 }
 
 /** Most recent observed ball position at or before a frame, for the "not tracked" marker. */
-function lastSeenBall(scenario: Scenario, frame: number): XY | null {
+function lastSeenBall(scenario: PitchScenario, frame: number): XY | null {
   for (let f = frame; f >= 0; f--) {
     const ball = scenario.frames[f]?.ball;
     if (ball) return [ball[0], ball[1]];
@@ -47,7 +55,7 @@ function lastSeenBall(scenario: Scenario, frame: number): XY | null {
   return null;
 }
 
-export function Pitch({ scenario, showNumbers = true }: { scenario: Scenario; showNumbers?: boolean }) {
+export function Pitch({ scenario, showNumbers = true, synthetic = true }: { scenario: PitchScenario; showNumbers?: boolean; synthetic?: boolean }) {
   const { frame } = usePlayback();
   const titleId = useId();
   const descId = useId();
@@ -74,7 +82,7 @@ export function Pitch({ scenario, showNumbers = true }: { scenario: Scenario; sh
         role="img"
         aria-labelledby={`${titleId} ${descId}`}
       >
-        <title id={titleId}>Synthetic tactical pitch, {scenario.title}</title>
+        <title id={titleId}>{synthetic ? 'Synthetic tactical pitch' : 'Local tactical pitch'}, {scenario.title}</title>
         <desc id={descId}>{description}</desc>
         <rect className="pitch-surface" x={-3} y={-3} width={L + 6} height={W + 6} rx={1.5} />
         <Markings length={L} width={W} />
@@ -109,8 +117,8 @@ export function Pitch({ scenario, showNumbers = true }: { scenario: Scenario; sh
         )}
       </svg>
       <figcaption className="pitch-caption">
-        <span><span className="swatch swatch-home" aria-hidden="true" /> {scenario.teams.find((t) => t.side === 'home')?.name} attacks →</span>
-        <span>← <span className="swatch swatch-away" aria-hidden="true" /> {scenario.teams.find((t) => t.side === 'away')?.name}</span>
+        <span><span className="swatch swatch-home" aria-hidden="true" /> {scenario.teams.find((t) => t.side === 'home')?.name}{synthetic ? ' attacks →' : ' (home)'}</span>
+        <span>{synthetic ? '← ' : ''}<span className="swatch swatch-away" aria-hidden="true" /> {scenario.teams.find((t) => t.side === 'away')?.name}{synthetic ? '' : ' (away)'}</span>
       </figcaption>
     </figure>
   );

@@ -303,7 +303,7 @@ describe('Explorer redesign', () => {
     const inspector = screen.getByRole('complementary', { name: 'Frame inspector' });
     const details = within(inspector).getByText('Engine details').closest('details')!;
     expect(details).not.toHaveAttribute('open');
-    expect(within(details).getByText('Phase 3B state source')).toBeInTheDocument();
+    expect(within(details).getByText('Possession Engine state source')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Pitch and playback' })).toContainElement(screen.getByTestId('readout'));
   });
 });

@@ -1,5 +1,5 @@
 import { ChevronDown, CircleAlert, Cpu, Database, FlaskConical, Flag, Gauge, Rows3, Scale, SlidersHorizontal, Terminal, Waypoints } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { useDocumentTitle } from '../app/routing';
 import { ControlDiagram, RestartDiagram, SwitchDiagram } from '../components/Diagrams';
@@ -16,7 +16,7 @@ const SECTIONS = [
   ['evidence', 'Control evidence'],
   ['changes', 'Possession changes'],
   ['dead-ball', 'Dead ball and restarts'],
-  ['baseline', 'Phase 3B and smooth50'],
+  ['baseline', 'Possession Engine and smooth50'],
   ['parameters', 'Parameters'],
   ['limitations', 'Known limitations'],
   ['evaluation', 'Synthetic and real-match evaluation'],
@@ -61,7 +61,7 @@ const LIMITATIONS: readonly (readonly [string, string, string | null])[] = [
   ['Set-up before the tag window', 'A player holding or placing the ball before the set-piece tag opens reads as possession until the tag window starts.', null],
   ['Unknown-team restarts', 'After a restart with no known team, the first team to establish control is credited from the strike, which can favour a quick interception.', null],
   ['Kickoff just before a half block', 'A strike in the ungraded frames before a half is rejected; that half starts unknown until control establishes a team.', null],
-  ['Unvalidated thresholds', 'The parameters are reasoned, not validated: there is no measured evidence of how they perform on the match.', null],
+  ['Reasoned thresholds', 'The parameters were fixed from football reasoning. A short public-window evaluation does not establish full-match reliability.', null],
 ];
 
 function Section({ id, title, icon, children, className = '' }: { id: string; title: string; icon: LucideIcon; children: ReactNode; className?: string }) {
@@ -82,6 +82,56 @@ function Details({ title = 'Implementation details', children }: { title?: strin
   );
 }
 
+type SectionId = (typeof SECTIONS)[number][0];
+
+/** The section whose heading was most recently scrolled past the sticky navigation. */
+function useActiveSection(): [SectionId, (id: SectionId) => void] {
+  const [active, setActive] = useState<SectionId>(SECTIONS[0][0]);
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') return undefined;
+    const headings = SECTIONS.map(([id]) => document.getElementById(`h-${id}`)).filter((h): h is HTMLElement => h !== null);
+    const visible = new Set<string>();
+    const observer = new IntersectionObserver((entries) => {
+      for (const e of entries) (e.isIntersecting ? visible.add(e.target.id) : visible.delete(e.target.id));
+      const first = SECTIONS.find(([id]) => visible.has(`h-${id}`));
+      if (first) setActive(first[0]);
+    }, { rootMargin: '-180px 0px -55% 0px' });
+    headings.forEach((h) => observer.observe(h));
+    return () => observer.disconnect();
+  }, []);
+  return [active, setActive];
+}
+
+/** Two balanced rows of section links on wide screens; a native selector on phones. */
+function SectionNav() {
+  const [active, setActive] = useActiveSection();
+  const selectId = useId();
+  const go = (id: SectionId) => {
+    setActive(id);
+    const heading = document.getElementById(`h-${id}`);
+    heading?.scrollIntoView?.({ block: 'start' });
+    window.history.replaceState(window.history.state, '', `#h-${id}`);
+  };
+  return (
+    <nav className="section-nav" aria-label="On this page">
+      <ol className="section-nav-list">
+        {SECTIONS.map(([id, title]) => (
+          <li key={id}>
+            <a href={`#h-${id}`} aria-current={active === id ? 'location' : undefined}
+              onClick={() => setActive(id)}>{title}</a>
+          </li>
+        ))}
+      </ol>
+      <div className="section-nav-select">
+        <label htmlFor={selectId}>Jump to section</label>
+        <select id={selectId} className="select" value={active} onChange={(e) => go(e.currentTarget.value as SectionId)}>
+          {SECTIONS.map(([id, title]) => <option key={id} value={id}>{title}</option>)}
+        </select>
+      </div>
+    </nav>
+  );
+}
+
 export function MethodologyPage() {
   useDocumentTitle('Methodology');
   return (
@@ -90,7 +140,7 @@ export function MethodologyPage() {
         <div className="page-heading">
           <h1 id="page-title" className="page-title" tabIndex={-1}>Methodology</h1>
           <p className="page-lead">
-            How the MAF FC Phase 3B engine turns tracking data and Smart Tagging into one possession label per frame, how it
+            How the Rule-Based Possession Engine turns tracking data and Smart Tagging into one possession label per frame, how it
             differs from the official smooth50 baseline, and what we can and cannot claim about it.
           </p>
         </div>
@@ -101,11 +151,9 @@ export function MethodologyPage() {
         </dl>
       </div>
 
-      <nav className="section-chips" aria-label="On this page">
-        <ol>{SECTIONS.map(([id, title]) => <li key={id}><a href={`#h-${id}`}>{title}</a></li>)}</ol>
-      </nav>
+      <SectionNav />
 
-      <ol className="pipeline" aria-label="The five stages of the Phase 3B engine">
+      <ol className="pipeline" aria-label="The five stages of the Possession Engine">
         {STAGES.map(([name, text], i) => (
           <li key={name} className="pipeline-step">
             <span className="pipeline-index" aria-hidden="true">{i + 1}</span>
@@ -201,10 +249,10 @@ no ball       if the ball is not tracked`}</code></pre>
           <RestartDiagram />
         </Section>
 
-        <Section id="baseline" title="Phase 3B and smooth50" icon={Scale}>
+        <Section id="baseline" title="Possession Engine and smooth50" icon={Scale}>
           <div className="table-scroll" role="region" aria-labelledby="h-baseline" tabIndex={0}>
             <table className="data-table">
-              <thead><tr><th scope="col">Aspect</th><th scope="col">MAF FC Phase 3B</th><th scope="col">Official smooth50</th></tr></thead>
+              <thead><tr><th scope="col">Aspect</th><th scope="col">Rule-Based Possession Engine</th><th scope="col">Official smooth50</th></tr></thead>
               <tbody>
                 <tr><th scope="row">Per frame</th><td>Credible control (radius and margin)</td><td>Team of the nearest player, at any distance</td></tr>
                 <tr><th scope="row">Over time</th><td>State machine: 10 observations to switch, backdated</td><td>Majority vote over ±50 frames; ties go to home</td></tr>
@@ -220,7 +268,7 @@ no ball       if the ball is not tracked`}</code></pre>
         <Section id="parameters" title="Parameters" icon={SlidersHorizontal}>
           <p>
             The engine is rule-based: there is no machine learning and no training data. The nine parameters were fixed in
-            advance from football reasoning. None was fitted to, swept on or checked against the competition match.
+            advance from football reasoning. None was fitted to or selected against the competition match or its ground truth.
           </p>
           <div className="table-scroll" role="region" aria-labelledby="h-parameters" tabIndex={0}>
             <table className="data-table param-table">
@@ -255,7 +303,8 @@ no ball       if the ball is not tracked`}</code></pre>
           <div className="input-cards">
             <div className="mini-card"><strong>What the synthetic scenarios show</strong><p>How both models behave on four scripted situations whose true labels we wrote ourselves. The <Link to="/compare">Compare</Link> page scores them with the organisers&apos; public scorer.</p></div>
             <div className="mini-card"><strong>What they do not show</strong><p>Performance on the competition match. Four short scripted scenarios are not a sample of real football, and the reference labels are our own script, not independent ground truth.</p></div>
-            <div className="mini-card"><strong>On the match</strong><p>Following the organisers&apos; 3 November 2026 clarification, no accuracy was computed, and no parameter was tuned, on the competition match or its ground truth. We make no claim about our competition score.</p></div>
+            <div className="mini-card"><strong>Public five-minute evaluation</strong><p>After the algorithm was fixed, the unchanged official scorer measured spellF1 0.400000 and macroF1 0.597742 on 7,500 public frames with 17 possession spells. No public ground truth trained, tuned or selected the engine. This is a public-window result, not a private full-match score.</p></div>
+            <div className="mini-card" data-testid="prediction-comparison-note"><strong>Comparing predictions is not evaluation</strong><p>On the owner&apos;s computer, a local-only mode compares the Rule-Based Possession Engine with smooth50 on the same authorized match frames. It shows where the two predictions agree or differ, not which is right: with no reference labels, it measures no accuracy. This public site contains no match data.</p></div>
           </div>
         </Section>
 
@@ -263,7 +312,7 @@ no ball       if the ball is not tracked`}</code></pre>
           <ol className="numbered">
             <li>Each scenario is scripted in code (<code>tools/export_scenarios.py</code>): 22 players, the ball, missing observations and Smart Tagging set pieces.</li>
             <li>The script is written to temporary files in the same tracking and tagging formats the engines read.</li>
-            <li>The unchanged Phase 3B engine and the smooth50 baseline run on identical files. Their labels and per-frame evidence are exported.</li>
+            <li>The unchanged Possession Engine and the smooth50 baseline run on identical files. Their labels and per-frame evidence are exported.</li>
             <li>Reference labels are written down from the script, never from a model. The official scorer (vendored unchanged) compares each output with them.</li>
             <li>The output is deterministic JSON, with the engine commit and file hashes recorded as provenance. No competition data is read.</li>
           </ol>

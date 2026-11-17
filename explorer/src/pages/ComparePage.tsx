@@ -140,7 +140,7 @@ function DisagreementTable({ scenario, all }: { scenario: Scenario; all: readonl
           <label htmlFor={filterId}>Show</label>
           <select id={filterId} className="select select-sm" value={filter} onChange={(e) => setFilter(e.currentTarget.value as Filter)}>
             <option value="all">All differences</option>
-            <option value="phase3b">Phase 3B differs</option>
+            <option value="phase3b">Possession Engine differs</option>
             <option value="smooth50">smooth50 differs</option>
             <option value="both">Both differ</option>
           </select>
@@ -162,7 +162,7 @@ function DisagreementTable({ scenario, all }: { scenario: Scenario; all: readonl
                 <th scope="col">Frames</th>
                 <th scope="col">Duration</th>
                 <th scope="col">Reference</th>
-                <th scope="col">Phase 3B</th>
+                <th scope="col">Possession Engine</th>
                 <th scope="col">smooth50</th>
                 <th scope="col">Scenario event</th>
                 <th scope="col"><span className="sr-only">Actions</span></th>
@@ -177,7 +177,7 @@ function DisagreementTable({ scenario, all }: { scenario: Scenario; all: readonl
                     <td className="num" data-label="Frames">{d.start}–{d.end - 1}</td>
                     <td className="num" data-label="Duration">{d.end - d.start} f · {((d.end - d.start) / scenario.fps).toFixed(2)} s</td>
                     <td data-label="Reference"><LabelChip label={d.reference} /></td>
-                    <td data-label="Phase 3B" className={differs(d, 'phase3b') ? 'cell-diff' : undefined}><LabelChip label={d.phase3b} />{differs(d, 'phase3b') && <span className="sr-only"> (differs)</span>}</td>
+                    <td data-label="Possession Engine" className={differs(d, 'phase3b') ? 'cell-diff' : undefined}><LabelChip label={d.phase3b} />{differs(d, 'phase3b') && <span className="sr-only"> (differs)</span>}</td>
                     <td data-label="smooth50" className={differs(d, 'smooth50') ? 'cell-diff' : undefined}><LabelChip label={d.smooth50} />{differs(d, 'smooth50') && <span className="sr-only"> (differs)</span>}</td>
                     <td data-label="Event" className="cell-event">{events.length ? events.map((e) => e.type).join(', ') : '—'}</td>
                     <td className="cell-actions">
@@ -345,7 +345,7 @@ export function ComparePage() {
   return (
     <div className="page">
       <PageHeading title="Compare" synthetic>
-        MAF FC Phase 3B and the official smooth50 baseline, measured against each synthetic scenario&apos;s
+        Rule-Based Possession Engine and the official smooth50 baseline, measured against each synthetic scenario&apos;s
         scripted reference. These are synthetic checks of behaviour, not the competition score.
       </PageHeading>
       <ScenarioPanel entries={SCENARIO_ENTRIES} activeId={id} onSelect={select}

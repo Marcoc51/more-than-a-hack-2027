@@ -14,7 +14,8 @@ and matches predicted possessions to true ones by temporal IoU. Our goal was the
 - explicit stoppages, so that `H D H` reads as two possessions;
 - possession changes placed where control actually changes.
 
-The result is a deterministic, rule-based engine with no learned components and **no training
+The result, publicly named the **Rule-Based Possession Engine**, is a deterministic, rule-based
+engine with no learned components and **no training
 data**. No labelled data of any kind was used, from the provided game or from anywhere else.
 
 ## 2. Inputs
@@ -208,8 +209,8 @@ python -m pytest tests/test_baseline.py tests/test_possession.py tests/test_game
 ```
 
 The output is the same byte for byte on every run. The official reference repository is not
-needed for competition CSV generation. The optional integrated suite has 220 passing synthetic
-Python tests across `tests/` and `tools/`; it also checks external adapters and the Explorer
+needed for competition CSV generation. The earlier integrated verification recorded 220 passing
+synthetic Python tests across `tests/` and `tools/`; it also checked external adapters and the Explorer
 exporter. To run that suite, first install the pinned public official files with
 `python benchmark/setup_official.py`, then run `python -m pytest tests tools -q`. The
 separate IDSSE study used one external match to measure provider-annotation agreement; it was
@@ -249,16 +250,20 @@ not synthetic-only validation and is not a competition score.
 
 ## Optional external validation
 
-The competition inference and CSV above use the frozen Phase 3B engine without IDSSE or SkillCorner
+The competition inference and CSV above use the Rule-Based Possession Engine (the internal
+Phase 3B implementation) without IDSSE or SkillCorner
 data. External adapters are optional research tools; IDSSE match data is acquired separately under
 CC BY 4.0. The external benchmark excludes provider labels and events from prediction inputs and
 does not bridge IDSSE events into Smart Tagging restarts. Its single development-match numbers are
 agreement with DFL provider annotations, not competition performance or independent possession
 ground truth. See [the detailed benchmark report](IDSSE_BENCHMARK_E1D_B.md).
 
-The optional [React Explorer](../explorer/README.md) displays scripted synthetic scenarios and
-their engine-generated predictions. It reads no competition match data and is not part of CSV
-generation; its synthetic scores are separate from the IDSSE provider-agreement result.
+The optional [React Explorer](../explorer/README.md#operating-modes) defaults to scripted synthetic
+scenarios and their engine-generated predictions. A separate localhost-only development mode
+can open bounded owner-authorized visualization exports in browser memory, without generating
+or changing predictions. Neither mode is part of competition CSV generation; synthetic scores
+are separate from competition accuracy and the IDSSE provider-agreement result. The
+[architecture diagram](assets/possession-architecture.svg) shows these boundaries.
 
 ## 9. References and attribution
 
