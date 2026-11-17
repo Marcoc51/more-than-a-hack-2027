@@ -176,6 +176,7 @@ None was fitted to, or checked against, the competition match. See the technical
   [More than a Hack 2027 starter kit](https://github.com/metrica-sports/more-than-a-hack-2027),
   © 2026-2027 Metrica Sports, MIT. Its full notice is reproduced in `src/baseline.py`.
 - **Explorer asset exception:** the team portraits and organiser logos are excluded from this
-  repository's MIT licence, as are the Motus-derived styling values. Their public-use rights
-  require separate evidence; see [Explorer rights status](explorer/README.md#visual-identity-and-licences).
+  repository's MIT licence, as are the Motus-derived styling values. The owner confirms their
+  project-specific public use; no independent grant documents were inspected. See
+  [Explorer rights status](explorer/README.md#owner-confirmed-public-use-permissions).
 - **The match data** is not covered by either licence.

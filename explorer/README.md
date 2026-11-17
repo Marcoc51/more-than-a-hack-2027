@@ -43,11 +43,19 @@ npm run dev        # http://localhost:5173
 npm test           # Vitest + Testing Library
 npm run typecheck  # tsc --noEmit (strict, noUncheckedIndexedAccess)
 npm run build      # typecheck + production build into dist/
+npm run licenses:check  # verify exact notices in an existing dist/
 npm run preview    # serve dist/
 npm run smoke      # browser smoke test of dist/ (needs a local Chrome, Chromium or Edge)
 ```
 
 No private registry, token or backend is needed.
+
+Each production build copies the exact license files from the installed, lockfile-matched production
+packages and Vite into `dist/licenses/`, plus the repository MIT license. It writes
+`dist/licenses/NOTICE.txt`, linked from the app footer. The build fails if a required package
+notice is missing, a version differs from the lockfile, or the emitted font set changes.
+`npm run licenses:check` verifies the distributed copies byte for byte. `dist/` remains ignored;
+run `npm ci` and `npm run build` to reproduce it.
 
 ### Static hosting
 
@@ -80,7 +88,9 @@ It checks:
 
 ## Team data
 
-MAF FC has four members: Marc, Fahmy, Faris and Eslam. Their names and links, approved by the project owner, live in
+MAF FC has four members: Marc, Fahmy, Faris and Eslam. The owner confirms that all four members
+permit public repository and website use of their names and supplied portraits. Their names and
+links live in
 [`src/team/members.ts`](src/team/members.ts); no biographies or contact details are shown.
 - Photos are 400 x 500 px WebP portraits in `public/team/`, cropped from owner-supplied images with all metadata
   removed. A missing or broken photo falls back to the member's initial. The project owner supplied
@@ -147,8 +157,8 @@ future Home page) only needs another provider.
 
 - **Brand:** the app is publicly branded **MAF FC** / **MAF FC Possession Explorer**. It shows no
   Motus logo or artwork, and it is not an official Motus product.
-- **Styling:** the look follows the **Motus visual identity**. The project owner reports Motus
-  permission, but this repository contains no grant specifying public GitHub or deployment scope:
+- **Styling:** the look follows the **Motus visual identity**. The owner confirms authorization
+  for this project's public repository and website use; no independent grant document is included:
   - Night (dark, default) and Floodlight (light) themes, Volt accent;
   - Space Grotesk and Inter;
   - Motus spacing, radii, control sizes, motion and control conventions.
@@ -162,11 +172,10 @@ future Home page) only needs another provider.
   always sit next to a visible label.
 - **Competition context:** the attribution sentence follows the organisers' official repository.
   The Metrica Sports, Barça Innovation Hub and Mobile World Capital Barcelona logos in
-  `public/organisers/` were supplied by the project owner for this use and are shown unmodified on a
-  black plate, each linking to the organiser's official site. They belong to their owners, are not
-  covered by this repository's MIT licence, and do not imply endorsement of MAF FC. Public event
-  branding or attribution guidance is not, by itself, a grant to redistribute these artwork files;
-  no such grant is recorded in this repository.
+  `public/organisers/` were supplied by the project owner, who confirms authorization for their
+  intended public repository and website use. They are shown unmodified on a black plate, each
+  linking to the organiser's official site. They belong to their owners, are not covered by this
+  repository's MIT licence, and do not imply endorsement of MAF FC.
 - **Fonts:** Inter and Space Grotesk, from the public
   [`@fontsource-variable`](https://fontsource.org) npm packages, under the SIL Open Font Licence
   1.1. The licence texts ship in those packages.
@@ -175,24 +184,11 @@ future Home page) only needs another provider.
 - **Code:** MIT (see [`../LICENSE`](../LICENSE)). The repository MIT licence does not license
   the portraits, organiser artwork or Motus-derived styling values.
 
-### Publication rights still to verify
+### Owner-confirmed public-use permissions
 
-No independent permission records for the four portraits, four organiser logo files or
-Motus-derived visual identity are included here. The relevant paths are:
-
-- `public/team/{marc,fahmy,faris,eslam}.webp`: obtain each person's consent to both public
-  repository distribution and public site display, plus rights from the photographer or source.
-  If unavailable, remove the images and use the existing initial-letter fallback.
-- `public/organisers/{metrica-sports.webp,barca-innovation-hub.webp,barca-innovation-hub-dark-text.png,mobile-world-capital-barcelona.webp}`:
-  obtain artwork redistribution/display permission from the rights holders, or use text links
-  and the existing text fallback.
-- `src/styles/tokens.css`, the Motus-derived conventions in `src/styles/app.css`, and
-  `../design-explorations/{_brand.md,ui3a-direction.html}`: confirm that Motus's grant covers
-  the selected identity and public distribution. If it does not, replace the Motus-specific
-  palette, theme names and token selection with independently chosen MAF FC values while
-  keeping the functional layout, navigation and openly licensed fonts/icons.
-
-Ordinary spacing, focus, layout and motion ideas implemented independently do not require
-installing Motus code. No Motus package, logo, artwork, component, icon or font file is bundled.
-Do not publish or deploy the current artwork and Motus-derived identity until the required
-scope is documented.
+The owner explicitly confirms public repository distribution and website display of the four
+team members' names and supplied portraits, intended public repository and website use of the
+four organiser logo files, and project use of the Motus-derived styling. These are owner-provided
+confirmations; the independent referee has not inspected signed grants, and no such documents are
+included here. The portraits, organiser artwork and Motus-derived styling remain outside the
+repository's MIT license. No Motus package, logo, artwork, component, icon or font file is bundled.

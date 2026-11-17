@@ -7,6 +7,7 @@ import { HomePage } from './pages/HomePage';
 import { MethodologyPage } from './pages/MethodologyPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { TeamPage } from './pages/TeamPage';
+import { assetUrl } from './app/assets';
 
 /** After a client-side route change, move focus to the new page's heading (and to the top), so
  *  keyboard and screen-reader users are not left on a link that has disappeared. The first page
@@ -47,7 +48,8 @@ export function App() {
       <footer className="app-footer">
         <p>
           <span className="footer-brand">MAF FC</span> · Built for More than a Hack 2027 ·{' '}
-          <a href="https://github.com/Marcoc51/more-than-a-hack-2027">source on GitHub</a> · code under MIT.
+          <a href="https://github.com/Marcoc51/more-than-a-hack-2027">source on GitHub</a> · code under MIT ·{' '}
+          <a href={assetUrl('licenses/NOTICE.txt')}>third-party notices</a>.
           Synthetic scenarios only. Not an official product of the competition organisers.
         </p>
       </footer>

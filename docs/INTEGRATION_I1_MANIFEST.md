@@ -8,8 +8,9 @@ from frozen main `ff686e3`. The reviewed I1 worktree remains the unchanged compa
 CRLF to LF; the scorer implementation is unchanged.
 This inventory originated as an I1-only file and is tracked in the release candidate.
 I2.1 also corrects the full-suite setup and test scope in the root README and technical document,
-and clarifies unresolved Explorer publication rights. Those documentation corrections do not
-change the competition engine.
+and records the then-unresolved Explorer publication rights. I2.3 records the owner's subsequent
+confirmation of public-use permissions in the root and Explorer READMEs. Those documentation
+corrections do not change the competition engine.
 
 ## External benchmark (`9c64651`): 22 paths
 
