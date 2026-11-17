@@ -1,0 +1,51 @@
+{
+  "format": "maf-external-labels-v1",
+  "match_id": "SYN-1",
+  "source": "synthetic",
+  "label_kind": "synthetic",
+  "split": "dev",
+  "fps": 10,
+  "n_frames": 8,
+  "halves": [
+    [
+      1,
+      4
+    ],
+    [
+      5,
+      7
+    ]
+  ],
+  "truth": [
+    "X",
+    "H",
+    "H",
+    "D",
+    "X",
+    "A",
+    "A",
+    "X"
+  ],
+  "predictions": {
+    "reference": [
+      "X",
+      "H",
+      "H",
+      "D",
+      "X",
+      "A",
+      "A",
+      "X"
+    ],
+    "variant": [
+      "X",
+      "H",
+      "D",
+      "D",
+      "X",
+      "A",
+      "A",
+      "X"
+    ]
+  }
+}

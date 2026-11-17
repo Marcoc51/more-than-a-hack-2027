@@ -237,10 +237,19 @@ needed.
   of how they perform on this match, and we make no claim about the score.
 
 **With more time:**
-- validate and calibrate the thresholds on externally licensed tracking data with possession
-  events (for example SkillCorner Open Data, MIT);
+- validate and calibrate the thresholds on external tracking data with verified data-use rights
+  and documented possession labels;
 - add a ball-height or trajectory cue for aerial balls;
 - detect untagged restarts from ball motion alone.
+
+## Optional external validation
+
+The competition inference and CSV above use the frozen Phase 3B engine without IDSSE or SkillCorner
+data. External adapters are optional research tools; IDSSE match data is acquired separately under
+CC BY 4.0. The external benchmark excludes provider labels and events from prediction inputs and
+does not bridge IDSSE events into Smart Tagging restarts. Its single development-match numbers are
+agreement with DFL provider annotations, not competition performance or independent possession
+ground truth. See [the detailed benchmark report](IDSSE_BENCHMARK_E1D_B.md).
 
 ## 9. References and attribution
 

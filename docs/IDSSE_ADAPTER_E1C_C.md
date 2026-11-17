@@ -1,0 +1,33 @@
+# E1C-C — IDSSE XML adapter, synthetic contract
+
+Status: synthetic-only adapter for the frozen Phase 3B engine. No IDSSE match XML was downloaded, parsed, scored, or published in this phase. The prior [IDSSE feasibility note](IDSSE_FEASIBILITY_E1C_B.md) and [SkillCorner rights decision](SKILLCORNER_E1C_A.md) remain in place.
+
+## Source and rights
+
+The contract is based on the [Bassek, Rein, Weber and Memmert (2025) publisher data descriptor](https://www.nature.com/articles/s41597-025-04505-y), [floodlight DFL parser source, documentation version 1.2.0](https://floodlight.readthedocs.io/en/latest/_modules/floodlight/io/dfl.html), and the [original dataset DOI](https://doi.org/10.6084/m9.figshare.28196177). The paper states that the DFL authorized the seven-match tracking, event, and metadata release under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Attribute the Deutsche Fußball Liga and cite the paper; link the license and indicate changes when sharing derivatives. Events are documented but are not read by this adapter.
+
+The [PySport mirror inventory](https://huggingface.co/datasets/pysport/idsse-data/tree/main) was viewed at its displayed revision `a715a38` for filenames and approximate sizes, not for data bytes or schema validation. Its card has match-ID discrepancies. **E1C-D correction:** the earlier statement here that `J03WMX` was unusually small was a mirror-listing misread. [Figshare v1](https://api.figshare.com/v2/articles/28196177) and the mirror both list its position XML at 418,524,833 bytes. E1C-D verified all seven original file triplets and downloaded one other match; see [the E1C-D audit](IDSSE_AUDIT_E1C_D.md). The [E1C-B note](IDSSE_FEASIBILITY_E1C_B.md) gives a provisional 349–419 MB estimate for complete position XMLs, which includes `J03WMX`.
+
+## Mapping and validation
+
+| IDSSE source field | Engine input or audit use | Rule |
+| --- | --- | --- |
+| `MatchInformation/General` `HomeTeamId`, `AwayTeamId` or `GuestTeamId` | `home_id`, `away_id` | Require distinct IDs; map each player `PersonId` through metadata `Teams/Team` and reject contradictory tracking `TeamId`. |
+| `Environment` `PitchX`, `PitchY` | `pitch` | Require positive metre dimensions. |
+| `FrameSet` `GameSection` | `segments` | Require first and second half ball sets; independently reset speed continuity at the half boundary. |
+| `Frame` `N`, `T` | `frame_keys`, `timestamps` | Require consecutive ball numbers and 40 ms timestamp steps within each half, with a 1 ms tolerance. Player frames must align to the ball frame number and exact timestamp. No interpolation. |
+| Ball and player `X`, `Y` | `Tracking.ball_x/ball_y`, nearest `home/away` distances | Source is pitch-centred metres; add half of `PitchX/PitchY` to get corner-origin metres. Missing or nonfinite coordinates are not observations. Distances are infinite if no valid player is present, and unknown when the ball is missing. |
+| Ball `S` | `Tracking.ball_speed` | Source is km/h; divide by 3.6 only when this and the preceding frame have finite ball `X/Y` in the same half and `S` is finite and nonnegative. Otherwise use NaN. Never bridge a missing observation or half boundary. The value is the provider's speed, not a speed estimated from interpolated coordinates. |
+| Ball `BallStatus`, `BallPossession` | `ProviderLabels` only | These fields never enter `Tracking`, `EngineInput`, or `predict`. No event XML or Smart Tagging input is read. |
+
+The publisher describes `N`, `T`, `X/Y`, `S`, `BallStatus`, and `BallPossession` on individual ball `Frame` records. It documents `BallStatus=0` as inactive/referee-interrupted and `1` as active; `BallPossession=1` denotes home and `2` away player control. It does not establish full-match code coverage, missing-value frequency, exact code transition behavior, or an independently annotated possession truth set. The adapter therefore refuses unexpected halves, frame/timestamp gaps, team-ID contradictions, and malformed metadata rather than silently repairing them. A full match may reveal additional legitimate schema variants; review them explicitly before extending the contract.
+
+`provider_labels` reads the position XML separately and aligns every `(GameSection, N, T)` to a validated tracking timeline. It maps inactive `0` to `D` even if a possession code remains populated; active `1` plus possession `1/2` to `H/A`; all missing, invalid, or contradictory code combinations to `X`. `X` is never filled from neighboring frames, predictions, event gaps, or interpolation. These are **DFL provider-derived labels**, not independent ground truth. The synthetic tests demonstrate only implementation behavior, not label quality or measured agreement. Sparse or uncertain `X` coverage must not be presented as whole-match official spellF1.
+
+`predict` passes only distances, ball coordinates, conditional speed, half segments, and pitch to the unchanged `src/possession.py` Phase 3B functions. It uses the original `DEFAULTS` and `GAME_DEFAULTS` at native 25 fps. Its Smart Tagging arrays are empty because DFL event timestamps have not been aligned or translated into restart windows. The frozen engine can still mark out-of-bounds stoppages from tracking; synthetic tests cover this. Missing-ball speeds cannot manufacture a restart strike. No default, threshold, or competition code was changed.
+
+## Reproduce and next gate
+
+Run `python -m pytest -q -rs -p no:cacheprovider` in this worktree. `tests/test_idsse_adapter.py` creates tiny XML fixtures in pytest temporary storage and exercises identity, coordinate edges, 25 Hz alignment, speed units and gaps, provider-code isolation, out-of-bounds stoppage, engine invocation, and malformed inputs. It does not require an IDSSE file. The existing benchmark suite still requires the documented [official scorer setup](EXTERNAL_BENCHMARK_E0.md) in a clean checkout.
+
+The smallest E1C-D task is **one licensed complete-match source and quality audit, without model scoring**: verify Figshare version and SHA-256, check actual XML schema and 25 Hz frame coverage, inspect coordinate and speed validity, quantify player/ball gaps and `BallStatus`/`BallPossession` combinations at transitions, and assess event alignment. Keep downloaded data in ignored `external_samples/idsse/`; do not publish raw frames or derived labels in the handoff. Only after that audit should a match-level agreement protocol and possible event-to-restart bridge be reviewed. A complete position XML appears to need roughly 0.35–0.42 GB download and additional disk/memory for parsing; this is an inventory estimate for the six larger mirror files, not a measured requirement or a verified Figshare size.
